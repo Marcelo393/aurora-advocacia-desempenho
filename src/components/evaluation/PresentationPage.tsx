@@ -10,11 +10,11 @@ interface PresentationPageProps {
 
 const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div className="text-center space-y-4">
         <div className="flex justify-center">
-          <div className="bg-gradient-to-r from-slate-900 to-slate-700 p-4 rounded-full">
+          <div className="bg-gradient-to-r from-slate-900 to-slate-700 p-4 rounded-full shadow-2xl">
             <Scale className="h-12 w-12 text-yellow-400" />
           </div>
         </div>
@@ -25,7 +25,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
       {/* Content Cards */}
       <div className="grid gap-6">
         {/* Welcome Card */}
-        <Card className="border-l-4 border-l-yellow-400 shadow-lg">
+        <Card className="border-l-4 border-l-yellow-400 shadow-lg hover-lift">
           <CardHeader>
             <CardTitle className="text-slate-900 flex items-center space-x-2">
               <Users className="h-5 w-5 text-yellow-600" />
@@ -40,7 +40,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
         </Card>
 
         {/* Process Card */}
-        <Card className="border-l-4 border-l-slate-900 shadow-lg">
+        <Card className="border-l-4 border-l-slate-900 shadow-lg hover-lift">
           <CardHeader>
             <CardTitle className="text-slate-900 flex items-center space-x-2">
               <Target className="h-5 w-5 text-slate-600" />
@@ -62,7 +62,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
 
         {/* Definition Cards Grid */}
         <div className="grid md:grid-cols-2 gap-6">
-          <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="shadow-lg hover:shadow-xl transition-shadow hover-lift">
             <CardHeader>
               <CardTitle className="text-slate-900 flex items-center space-x-2">
                 <Award className="h-5 w-5 text-yellow-600" />
@@ -76,7 +76,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <Card className="shadow-lg hover:shadow-xl transition-shadow hover-lift">
             <CardHeader>
               <CardTitle className="text-slate-900 flex items-center space-x-2">
                 <Users className="h-5 w-5 text-yellow-600" />
@@ -92,7 +92,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
         </div>
 
         {/* Self-Assessment Explanation */}
-        <Card className="border-l-4 border-l-yellow-400 shadow-lg">
+        <Card className="border-l-4 border-l-yellow-400 shadow-lg hover-lift">
           <CardContent className="pt-6">
             <p className="text-slate-700 leading-relaxed mb-4">
               A etapa de autoavaliação, é o momento de olharmos para nós mesmos. É uma prática que permite tecer uma análise sobre si mesmo do ponto de vista profissional, apontando pontos positivos, melhorias a serem feitas e problemas a serem corrigidos.
@@ -109,7 +109,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
           <Button 
             onClick={onNext}
             size="lg"
-            className="bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             Iniciar Avaliação
             <ChevronRight className="ml-2 h-5 w-5" />
