@@ -19,7 +19,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
           </div>
         </div>
         <h1 className="text-4xl font-bold text-slate-900">Avaliação de Desempenho</h1>
-        <h2 className="text-2xl font-semibold text-yellow-600">Autoavaliação</h2>
+        <h2 className="text-2xl font-semibold text-yellow-600">Autoavaliação - Segundo Semestre 2025</h2>
       </div>
 
       {/* Content Cards */}
@@ -34,7 +34,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
           </CardHeader>
           <CardContent>
             <p className="text-slate-700 leading-relaxed">
-              Olá pessoal! Estamos chegando ao final do segundo semestre de 2024. Portanto, será aplicada a Avaliação de Desempenho com todos os estagiários do escritório! Para quem irá participar pela primeira vez, abaixo temos uma explicação detalhada, desde a importância até as etapas que serão realizadas.
+              Olá pessoal! Estamos chegando ao final do segundo semestre de 2025. Portanto, será aplicada a Avaliação de Desempenho com todos os estagiários do escritório! Para quem irá participar pela primeira vez, abaixo temos uma explicação detalhada, desde a importância até as etapas que serão realizadas.
             </p>
           </CardContent>
         </Card>
@@ -49,7 +49,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({ onNext }) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-slate-700 leading-relaxed">
-              De 03/07 até 09/07 o formulário para a coleta de autoavaliação + coleta de clima (etapa 1) estará aberto. Posteriormente a essa data, será marcado um horário de reunião individual de feedbacks e parecer (etapa 2).
+              De 11/07 até 17/07 o formulário para a coleta de autoavaliação + coleta de clima (etapa 1) estará aberto. Posteriormente a essa data, será marcado um horário de reunião individual de feedbacks e parecer (etapa 2).
             </p>
             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
               <h4 className="font-semibold text-slate-900 mb-2">Como devo responder?</h4>
