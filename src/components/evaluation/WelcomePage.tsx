@@ -52,7 +52,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
             
             <div className="space-y-4">
               <h2 className="text-3xl md:text-4xl font-semibold text-blue-200">
-                Escritório Morestoni Advocacia
+                Morestoni Sociedade de Advogados
               </h2>
               <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
                 Sistema de autoavaliação profissional para desenvolvimento contínuo e excelência jurídica

@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 
 export interface FormDataToSend {
@@ -74,7 +73,7 @@ export const generatePDF = (formData: FormDataToSend): void => {
   
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('Escritório Morestoni Advocacia', pageWidth / 2, 30, { align: 'center' });
+  pdf.text('Morestoni Sociedade de Advogados', pageWidth / 2, 30, { align: 'center' });
   
   yPosition = 55;
 

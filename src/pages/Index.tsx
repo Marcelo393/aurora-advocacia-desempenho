@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -179,7 +178,7 @@ const Index = () => {
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent">
                   Sistema de Avaliação de Desempenho
                 </h1>
-                <p className="text-slate-300 text-lg">Escritório Morestoni Advocacia</p>
+                <p className="text-slate-300 text-lg">Morestoni Sociedade de Advogados</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -266,14 +265,18 @@ const Index = () => {
         }`}>
           <CardContent className="p-8">
             <div className={`transition-all duration-300 ${isTransitioning ? 'translate-x-4 opacity-0' : 'translate-x-0 opacity-100'}`}>
-              <CurrentScreenComponent 
-                formData={formData}
-                updateFormData={updateFormData}
-                onNext={nextPage}
-                onPrev={prevPage}
-                canGoBack={currentScreen > 2}
-                isLastPage={currentScreen === screens.length - 1}
-              />
+              {currentScreen === 1 ? (
+                <PresentationPage onNext={nextPage} />
+              ) : (
+                <CurrentScreenComponent 
+                  formData={formData}
+                  updateFormData={updateFormData}
+                  onNext={nextPage}
+                  onPrev={prevPage}
+                  canGoBack={currentScreen > 2}
+                  isLastPage={currentScreen === screens.length - 1}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

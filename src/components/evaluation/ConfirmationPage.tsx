@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +63,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 relative overflow-hidden">
-      {/* Confetti Animation */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50">
           <div className="absolute inset-0">
@@ -99,7 +97,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
       )}
 
       <div className="max-w-4xl mx-auto p-6 space-y-8 relative z-10">
-        {/* Celebration Header */}
         <div className={`text-center space-y-6 transition-all duration-1000 ${
           showCelebration ? 'animate-fade-in' : 'opacity-0'
         }`}>
@@ -128,7 +125,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
           </div>
         </div>
 
-        {/* Statistics Card */}
         <Card className="shadow-2xl border-0 bg-gradient-to-br from-white to-blue-50 hover-lift">
           <CardHeader>
             <CardTitle className="text-center text-2xl font-bold text-slate-800 flex items-center justify-center space-x-2">
@@ -173,7 +169,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
           </CardContent>
         </Card>
 
-        {/* Download Section */}
         <Card className="shadow-2xl border-0 bg-gradient-to-br from-white to-green-50 hover-lift">
           <CardHeader>
             <CardTitle className="text-slate-900 flex items-center space-x-3">
@@ -223,7 +218,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
           </CardContent>
         </Card>
 
-        {/* Next Steps */}
         <Card className="shadow-2xl border-0 bg-gradient-to-br from-white to-yellow-50 hover-lift">
           <CardHeader>
             <CardTitle className="text-slate-900 flex items-center space-x-3">
@@ -247,7 +241,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
           </CardContent>
         </Card>
 
-        {/* Thank You Message */}
         <div className="text-center space-y-6 py-8">
           <div className="space-y-4">
             <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -277,7 +270,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
         </div>
       </div>
 
-      {/* Custom Styles for this page */}
       <style>{`
         .hover-lift {
           transition: all 0.3s ease;
