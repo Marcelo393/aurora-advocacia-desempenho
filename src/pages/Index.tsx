@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronRight, ChevronLeft, Scale, Users, ClipboardCheck, BarChart3, Volume2, VolumeX } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Scale, Users, ClipboardCheck, BarChart3, Volume2, VolumeX, Home } from 'lucide-react';
+import WelcomePage from '@/components/evaluation/WelcomePage';
 import PresentationPage from '@/components/evaluation/PresentationPage';
 import DataSkillsPage from '@/components/evaluation/DataSkillsPage';
 import ManagementFeedbackPage from '@/components/evaluation/ManagementFeedbackPage';
@@ -12,7 +13,7 @@ import ConfirmationPage from '@/components/evaluation/ConfirmationPage';
 import { soundService } from '@/services/soundService';
 
 const Index = () => {
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentScreen, setCurrentScreen] = useState(0); // 0 = Welcome, 1 = Presentation, 2-5 = Form pages, 6 = Confirmation
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [formData, setFormData] = useState({
@@ -77,45 +78,71 @@ const Index = () => {
     experienciaExtra: ''
   });
 
-  const pages = [
+  const screens = [
+    { component: WelcomePage, title: "Início", icon: Home, emoji: "🏠" },
     { component: PresentationPage, title: "Apresentação", icon: Scale, emoji: "📋" },
     { component: DataSkillsPage, title: "Dados e Habilidades", icon: Users, emoji: "📊" },
     { component: ManagementFeedbackPage, title: "Gestão e Feedback", icon: ClipboardCheck, emoji: "👥" },
     { component: ClimateCollectionPage, title: "Coleta de Clima", icon: BarChart3, emoji: "📈" }
   ];
 
-  const progress = ((currentPage + 1) / pages.length) * 100;
+  // Progresso para as páginas do formulário (exclui welcome e confirmation)
+  const formProgress = currentScreen > 1 && currentScreen < 6 ? ((currentScreen - 1) / 4) * 100 : 0;
 
   useEffect(() => {
     soundService.setSoundEnabled(soundEnabled);
   }, [soundEnabled]);
 
+  const handleStart = async () => {
+    if (soundEnabled) {
+      await soundService.playProgressSound();
+    }
+    
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentScreen(1);
+      setIsTransitioning(false);
+    }, 150);
+  };
+
   const nextPage = async () => {
-    if (currentPage < pages.length) {
+    if (currentScreen < screens.length) {
       if (soundEnabled) {
         await soundService.playProgressSound();
       }
       
       setIsTransitioning(true);
       setTimeout(() => {
-        setCurrentPage(currentPage + 1);
+        setCurrentScreen(currentScreen + 1);
         setIsTransitioning(false);
       }, 150);
     }
   };
 
   const prevPage = async () => {
-    if (currentPage > 0) {
+    if (currentScreen > 1) {
       if (soundEnabled) {
         await soundService.playClickSound();
       }
       
       setIsTransitioning(true);
       setTimeout(() => {
-        setCurrentPage(currentPage - 1);
+        setCurrentScreen(currentScreen - 1);
         setIsTransitioning(false);
       }, 150);
     }
+  };
+
+  const goHome = async () => {
+    if (soundEnabled) {
+      await soundService.playClickSound();
+    }
+    
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentScreen(0);
+      setIsTransitioning(false);
+    }, 150);
   };
 
   const updateFormData = (data: any) => {
@@ -126,11 +153,17 @@ const Index = () => {
     setSoundEnabled(!soundEnabled);
   };
 
-  if (currentPage >= pages.length) {
-    return <ConfirmationPage formData={formData} />;
+  // Welcome screen
+  if (currentScreen === 0) {
+    return <WelcomePage onStart={handleStart} />;
   }
 
-  const CurrentPageComponent = pages[currentPage].component;
+  // Confirmation screen
+  if (currentScreen >= screens.length) {
+    return <ConfirmationPage formData={formData} onGoHome={goHome} />;
+  }
+
+  const CurrentScreenComponent = screens[currentScreen].component;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 transition-all duration-500">
@@ -146,7 +179,7 @@ const Index = () => {
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent">
                   Sistema de Avaliação de Desempenho
                 </h1>
-                <p className="text-slate-300 text-lg">Escritório de Advocacia</p>
+                <p className="text-slate-300 text-lg">Escritório Morestoni Advocacia</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -158,58 +191,71 @@ const Index = () => {
               >
                 {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
               </Button>
+              <Button
+                onClick={goHome}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-slate-700 transition-all duration-200"
+              >
+                <Home className="h-5 w-5" />
+              </Button>
               <div className="text-right">
-                <p className="text-sm text-slate-300">Página {currentPage + 1} de {pages.length}</p>
+                <p className="text-sm text-slate-300">Página {currentScreen} de {screens.length - 1}</p>
               </div>
             </div>
           </div>
           
-          {/* Enhanced Progress Bar */}
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm text-slate-300">
-              <span>Progresso da Avaliação</span>
-              <span>{Math.round(progress)}% completo</span>
+          {/* Enhanced Progress Bar - apenas para o formulário */}
+          {currentScreen > 1 && currentScreen < 6 && (
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm text-slate-300">
+                <span>Progresso da Avaliação</span>
+                <span>{Math.round(formProgress)}% completo</span>
+              </div>
+              
+              {/* Segmented Progress Bar */}
+              <div className="flex space-x-1 h-2">
+                {[2, 3, 4, 5].map((pageIndex) => (
+                  <div
+                    key={pageIndex}
+                    className={`flex-1 rounded-full transition-all duration-500 ${
+                      pageIndex < currentScreen 
+                        ? 'bg-gradient-to-r from-green-400 to-green-500' 
+                        : pageIndex === currentScreen 
+                          ? 'bg-gradient-to-r from-blue-400 to-blue-500' 
+                          : 'bg-slate-600'
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
-            
-            {/* Segmented Progress Bar */}
-            <div className="flex space-x-1 h-2">
-              {pages.map((_, index) => (
-                <div
-                  key={index}
-                  className={`flex-1 rounded-full transition-all duration-500 ${
-                    index < currentPage 
-                      ? 'bg-gradient-to-r from-green-400 to-green-500' 
-                      : index === currentPage 
-                        ? 'bg-gradient-to-r from-blue-400 to-blue-500' 
-                        : 'bg-slate-600'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
+          )}
           
-          {/* Page Navigation */}
-          <div className="flex justify-between mt-6">
-            {pages.map((page, index) => {
-              const Icon = page.icon;
-              return (
-                <div 
-                  key={index}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 ${
-                    index === currentPage 
-                      ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 shadow-lg' 
-                      : index < currentPage 
-                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
-                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                  }`}
-                >
-                  <span className="text-lg">{page.emoji}</span>
-                  <Icon className="h-4 w-4" />
-                  <span className="text-xs font-medium hidden sm:block">{page.title}</span>
-                </div>
-              );
-            })}
-          </div>
+          {/* Page Navigation - apenas para o formulário */}
+          {currentScreen > 1 && currentScreen < 6 && (
+            <div className="flex justify-between mt-6">
+              {screens.slice(1, 5).map((screen, index) => {
+                const pageIndex = index + 2;
+                const Icon = screen.icon;
+                return (
+                  <div 
+                    key={index}
+                    className={`flex items-center space-x-2 px-4 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 ${
+                      pageIndex === currentScreen 
+                        ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 shadow-lg' 
+                        : pageIndex < currentScreen 
+                          ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                          : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    <span className="text-lg">{screen.emoji}</span>
+                    <Icon className="h-4 w-4" />
+                    <span className="text-xs font-medium hidden sm:block">{screen.title}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -220,13 +266,13 @@ const Index = () => {
         }`}>
           <CardContent className="p-8">
             <div className={`transition-all duration-300 ${isTransitioning ? 'translate-x-4 opacity-0' : 'translate-x-0 opacity-100'}`}>
-              <CurrentPageComponent 
+              <CurrentScreenComponent 
                 formData={formData}
                 updateFormData={updateFormData}
                 onNext={nextPage}
                 onPrev={prevPage}
-                canGoBack={currentPage > 0}
-                isLastPage={currentPage === pages.length - 1}
+                canGoBack={currentScreen > 2}
+                isLastPage={currentScreen === screens.length - 1}
               />
             </div>
           </CardContent>
@@ -234,7 +280,7 @@ const Index = () => {
       </div>
 
       {/* Custom Styles */}
-      <style jsx global>{`
+      <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         body {

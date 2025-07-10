@@ -2,16 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Download, Mail, Calendar, FileText, Sparkles, Clock } from 'lucide-react';
+import { CheckCircle, Download, Mail, Calendar, FileText, Sparkles, Clock, Home } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generatePDF, FormDataToSend } from '@/services/pdfService';
 import { soundService } from '@/services/soundService';
 
 interface ConfirmationPageProps {
   formData: FormDataToSend;
+  onGoHome: () => void;
 }
 
-const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData }) => {
+const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [completionTime] = useState(new Date());
@@ -40,7 +41,7 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData }) => {
       
       toast({
         title: "PDF gerado com sucesso!",
-        description: "Seu arquivo foi baixado. Envie para marcelomorestoni@gmail.com",
+        description: "Seu arquivo foi baixado. Envie para juliacristina@morestoni.adv.br",
       });
       
       if (soundService.isSoundEnabled()) {
@@ -194,7 +195,7 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData }) => {
                   <strong>📧 Enviar para:</strong>
                 </p>
                 <p className="text-lg font-semibold text-slate-800">
-                  marcelomorestoni@gmail.com
+                  juliacristina@morestoni.adv.br
                 </p>
               </div>
             </div>
@@ -266,17 +267,18 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData }) => {
           </div>
           
           <Button 
-            onClick={() => window.location.href = '/'}
+            onClick={onGoHome}
             variant="outline"
             className="border-2 border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400 px-6 py-3 transition-all duration-300 transform hover:scale-105"
           >
+            <Home className="mr-2 h-4 w-4" />
             Voltar ao Início
           </Button>
         </div>
       </div>
 
       {/* Custom Styles for this page */}
-      <style jsx>{`
+      <style>{`
         .hover-lift {
           transition: all 0.3s ease;
         }

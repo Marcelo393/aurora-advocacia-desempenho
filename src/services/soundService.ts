@@ -15,7 +15,7 @@ class SoundService {
     }
   }
 
-  private async playTone(frequency: number, duration: number, type: OscillatorType = 'sine') {
+  private async playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.1) {
     if (!this.audioContext || !this.soundEnabled) return;
 
     try {
@@ -28,7 +28,7 @@ class SoundService {
       oscillator.frequency.value = frequency;
       oscillator.type = type;
 
-      gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+      gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
 
       oscillator.start(this.audioContext.currentTime);
@@ -39,24 +39,38 @@ class SoundService {
   }
 
   async playClickSound() {
-    await this.playTone(800, 0.1, 'square');
+    // Som satisfatório tipo PlayStation notification - grave e satisfatório
+    await this.playTone(440, 0.25, 'sine', 0.15);
   }
 
   async playSuccessSound() {
     if (!this.soundEnabled) return;
     
-    // Sequência de notas ascendentes para som de sucesso
-    const notes = [523, 659, 784, 1047]; // C, E, G, C (oitava)
+    // Som épico de finalização tipo "achievement unlocked"
+    const notes = [
+      { freq: 523, time: 0 },     // C
+      { freq: 659, time: 150 },   // E
+      { freq: 784, time: 300 },   // G
+      { freq: 1047, time: 450 }   // C oitava
+    ];
     
-    for (let i = 0; i < notes.length; i++) {
+    notes.forEach(note => {
       setTimeout(() => {
-        this.playTone(notes[i], 0.2, 'sine');
-      }, i * 100);
-    }
+        this.playTone(note.freq, 0.4, 'sine', 0.2);
+      }, note.time);
+    });
+
+    // Adiciona um acorde final épico
+    setTimeout(() => {
+      this.playTone(523, 0.8, 'sine', 0.15);
+      this.playTone(659, 0.8, 'sine', 0.15);
+      this.playTone(784, 0.8, 'sine', 0.15);
+    }, 600);
   }
 
   async playProgressSound() {
-    await this.playTone(600, 0.15, 'triangle');
+    // Som satisfatório de progresso - PlayStation style
+    await this.playTone(600, 0.2, 'sine', 0.12);
   }
 
   setSoundEnabled(enabled: boolean) {
