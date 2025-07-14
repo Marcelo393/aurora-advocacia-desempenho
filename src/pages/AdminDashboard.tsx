@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { 
   LogOut, 
   Users, 
@@ -20,11 +23,26 @@ import {
   Trash2,
   Shield,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Filter,
+  RefreshCw,
+  Eye,
+  Star,
+  Smile,
+  Trophy,
+  Target,
+  Lightbulb,
+  AlertCircle,
+  ArrowUp,
+  ArrowDown,
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart as RechartsLineChart, Line, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -32,6 +50,48 @@ const AdminDashboard = () => {
   const [selectedSector, setSelectedSector] = useState('all');
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [hasRealData, setHasRealData] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('30');
+  const [activeTab, setActiveTab] = useState('todos');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
+  
+  const itemsPerPage = 10;
+  
+  // Cores para gráficos
+  const CHART_COLORS = ['#1e40af', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
+  
+  // Função para obter dados completos dos funcionários
+  const getEmployeeData = () => {
+    const savedData = localStorage.getItem('evaluationResponses');
+    if (savedData) {
+      try {
+        const evaluations = JSON.parse(savedData);
+        return evaluations.map((evaluation: any, index: number) => ({
+          id: evaluation.id || `emp-${index}`,
+          name: evaluation.name || `Funcionário ${index + 1}`,
+          sector: evaluation.sector || 'Não informado',
+          date: evaluation.timestamp || evaluation.createdAt || new Date().toISOString(),
+          overallRating: calculateIndividualOverallRating(evaluation.skills || {}),
+          skills: evaluation.skills || {},
+          climateRating: evaluation.climateRating || 0,
+          evaluation: evaluation
+        }));
+      } catch (error) {
+        console.error('Erro ao processar dados dos funcionários:', error);
+        return [];
+      }
+    }
+    return [];
+  };
+  
+  const calculateIndividualOverallRating = (skills: any) => {
+    const ratings = Object.values(skills).filter(Boolean) as number[];
+    if (ratings.length === 0) return 0;
+    const sum = ratings.reduce((acc, rating) => acc + rating, 0);
+    return parseFloat((sum / ratings.length).toFixed(1));
+  };
 
   // Setores disponíveis
   const sectors = [
@@ -377,6 +437,89 @@ const AdminDashboard = () => {
     });
   };
 
+  // Preparar dados para gráficos
+  const prepareChartData = () => {
+    const skillsChartData = dashboardData.skillsAnalysis.averages.map((item: any) => ({
+      skill: item.skill,
+      average: parseFloat(item.average),
+      color: parseFloat(item.average) >= 4 ? '#10b981' : parseFloat(item.average) >= 3 ? '#f59e0b' : '#ef4444'
+    }));
+
+    const sectorsChartData = dashboardData.sectorsAnalysis.map((sector: any, index: number) => ({
+      sector: sector.sector,
+      employees: sector.employees,
+      average: parseFloat(sector.average),
+      fill: CHART_COLORS[index % CHART_COLORS.length]
+    }));
+
+    return { skillsChartData, sectorsChartData };
+  };
+
+  // Filtrar dados dos funcionários
+  const filterEmployees = () => {
+    const employees = getEmployeeData();
+    let filtered = employees;
+
+    if (activeTab !== 'todos') {
+      filtered = filtered.filter(emp => emp.sector === activeTab);
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(emp => 
+        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.sector.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
+
+  // Preparar insights automáticos
+  const generateAutomaticInsights = () => {
+    const insights = [];
+    
+    // Melhor Performance
+    const bestSector = dashboardData.sectorsAnalysis.reduce((best: any, current: any) => 
+      parseFloat(current.average) > parseFloat(best.average) ? current : best
+    );
+    insights.push({
+      icon: <Trophy className="h-5 w-5 text-yellow-600" />,
+      title: "Melhor Performance",
+      description: `${bestSector.sector} destaca-se com média ${bestSector.average}`,
+      color: "from-yellow-50 to-yellow-100 border-yellow-200"
+    });
+
+    // Atenção Necessária
+    const criticalSkill = dashboardData.skillsAnalysis.averages.reduce((worst: any, current: any) => 
+      parseFloat(current.average) < parseFloat(worst.average) ? current : worst
+    );
+    insights.push({
+      icon: <AlertCircle className="h-5 w-5 text-red-600" />,
+      title: "Atenção Necessária",
+      description: `${criticalSkill.skill} precisa foco (média ${criticalSkill.average})`,
+      color: "from-red-50 to-red-100 border-red-200"
+    });
+
+    // Tendência
+    const overallTrend = dashboardData.overview.overallAverage > 3.5 ? "Positiva" : "Negativa";
+    insights.push({
+      icon: <TrendingUp className="h-5 w-5 text-blue-600" />,
+      title: "Tendência",
+      description: `Performance ${overallTrend} com média ${dashboardData.overview.overallAverage}`,
+      color: "from-blue-50 to-blue-100 border-blue-200"
+    });
+
+    // Recomendação
+    insights.push({
+      icon: <Lightbulb className="h-5 w-5 text-green-600" />,
+      title: "Recomendação",
+      description: dashboardData.insights.recommendation,
+      color: "from-green-50 to-green-100 border-green-200"
+    });
+
+    return insights;
+  };
+
   if (!dashboardData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
@@ -388,68 +531,127 @@ const AdminDashboard = () => {
     );
   }
 
-  const filteredSectorData = selectedSector === 'all' 
-    ? dashboardData.sectorsAnalysis 
-    : dashboardData.sectorsAnalysis.filter((s: any) => s.sector === selectedSector);
+  const { skillsChartData, sectorsChartData } = prepareChartData();
+  const filteredEmployees = filterEmployees();
+  const automaticInsights = generateAutomaticInsights();
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedEmployees = filteredEmployees.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100">
-      {/* Header */}
+      {/* Header Profissional */}
       <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-slate-900 text-white py-6 px-4 shadow-2xl">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
               <div className="bg-gradient-to-br from-yellow-400 to-yellow-500 p-3 rounded-full shadow-lg">
                 <BarChart3 className="h-8 w-8 text-slate-900" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Dashboard Administrativo</h1>
+                <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
                 <p className="text-blue-200">Morestoni Sociedade de Advogados</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              {hasRealData && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="ghost"
-                      className="text-red-200 hover:bg-red-500/20 hover:text-red-100 border border-red-300/30"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Limpar Dados
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center space-x-2">
-                        <AlertTriangle className="h-5 w-5 text-red-600" />
-                        <span>Limpar Dados de Teste</span>
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta ação vai remover permanentemente todos os dados de avaliação salvos no sistema. 
-                        Você tem certeza que deseja continuar?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleClearData}
-                        className="bg-red-600 hover:bg-red-700"
+            
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {/* Filtros */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center space-x-2">
+                  <Filter className="h-4 w-4" />
+                  <span className="text-sm">Período:</span>
+                  <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                    <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">7 dias</SelectItem>
+                      <SelectItem value="30">30 dias</SelectItem>
+                      <SelectItem value="90">90 dias</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm">Setor:</span>
+                  <Select value={selectedSector} onValueChange={setSelectedSector}>
+                    <SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {sectors.map(sector => (
+                        <SelectItem key={sector} value={sector}>{sector}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Botões */}
+              <div className="flex items-center space-x-2">
+                <Button 
+                  onClick={() => exportReport('pdf')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/10"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
+                
+                <Button 
+                  onClick={() => loadDashboardData()}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/10"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Atualizar
+                </Button>
+                
+                {hasRealData && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-200 hover:bg-red-500/20 hover:text-red-100"
                       >
-                        Sim, limpar dados
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              <Button 
-                onClick={handleLogout}
-                variant="ghost"
-                className="text-white hover:bg-white/10"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
-              </Button>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Limpar Dados
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center space-x-2">
+                          <AlertTriangle className="h-5 w-5 text-red-600" />
+                          <span>Limpar Dados</span>
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação vai remover permanentemente todos os dados de avaliação. Continuar?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearData} className="bg-red-600 hover:bg-red-700">
+                          Sim, limpar dados
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                
+                <Button 
+                  onClick={handleLogout}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/10"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -457,171 +659,255 @@ const AdminDashboard = () => {
 
       {/* Info Bar */}
       <div className="bg-white border-b border-slate-200 py-4 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-slate-500" />
-                <span className="text-sm text-slate-600">
-                  {new Date().toLocaleDateString('pt-BR', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Shield className="h-4 w-4 text-slate-500" />
-                <span className="text-sm text-slate-600">
-                  {hasRealData ? 'Dados Reais' : 'Dados de Demonstração'}
-                </span>
-              </div>
-              {!hasRealData && (
-                <Button 
-                  onClick={generateTestData}
-                  size="sm"
-                  variant="outline"
-                  className="text-blue-600 hover:bg-blue-50 border-blue-200"
-                >
-                  <Database className="h-4 w-4 mr-2" />
-                  Gerar Dados de Teste
-                </Button>
-              )}
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-slate-500" />
+              <span className="text-sm text-slate-600">
+                {new Date().toLocaleDateString('pt-BR', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </span>
             </div>
-            <div className="text-sm text-slate-500">
-              Total de respostas: {dashboardData.overview.totalEvaluations}
+            <div className="flex items-center space-x-2">
+              <Shield className="h-4 w-4 text-slate-500" />
+              <span className="text-sm text-slate-600">
+                {hasRealData ? 'Dados Reais' : 'Dados de Demonstração'}
+              </span>
             </div>
+            {!hasRealData && (
+              <Button 
+                onClick={generateTestData}
+                size="sm"
+                variant="outline"
+                className="text-blue-600 hover:bg-blue-50 border-blue-200"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                Gerar Dados de Teste
+              </Button>
+            )}
+          </div>
+          <div className="text-sm text-slate-500">
+            Total de respostas: {dashboardData.overview.totalEvaluations}
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto p-6 space-y-8">
-        {/* Seção 1 - Visão Geral */}
+        {/* Cards Resumo */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium opacity-90">Total de Avaliações</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold">{dashboardData.overview.totalEvaluations}</span>
-                <Users className="h-8 w-8 opacity-80" />
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Total Avaliações</p>
+                  <p className="text-3xl font-bold">{dashboardData.overview.totalEvaluations}</p>
+                  <p className="text-blue-100 text-xs mt-1">📊 Respostas coletadas</p>
+                </div>
+                <Users className="h-12 w-12 text-blue-200" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium opacity-90">Tempo Médio</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold">{dashboardData.overview.averageTime}</span>
-                <Calendar className="h-8 w-8 opacity-80" />
+                <div>
+                  <p className="text-green-100 text-sm font-medium">Nota Média Geral</p>
+                  <p className="text-3xl font-bold flex items-center">
+                    ⭐ {dashboardData.overview.overallAverage}
+                  </p>
+                  <p className="text-green-100 text-xs mt-1">
+                    {dashboardData.overview.overallAverage >= 4 ? 'Excelente' : 
+                     dashboardData.overview.overallAverage >= 3 ? 'Bom' : 'Atenção'}
+                  </p>
+                </div>
+                <Star className="h-12 w-12 text-green-200" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium opacity-90">Nota Média Geral</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold">{dashboardData.overview.overallAverage}</span>
-                <Award className="h-8 w-8 opacity-80" />
+                <div>
+                  <p className="text-yellow-100 text-sm font-medium">Melhor Setor</p>
+                  <p className="text-lg font-bold">🏆 {dashboardData.insights.bestSector.split(' - ')[0]}</p>
+                  <p className="text-yellow-100 text-xs mt-1">Maior performance</p>
+                </div>
+                <Trophy className="h-12 w-12 text-yellow-200" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium opacity-90">Última Resposta</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <span className="text-xl font-bold">{dashboardData.overview.lastResponse}</span>
-                <TrendingUp className="h-8 w-8 opacity-80" />
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Clima Organizacional</p>
+                  <p className="text-3xl font-bold flex items-center">
+                    😊 {dashboardData.climateData.generalSatisfaction}
+                  </p>
+                  <p className="text-purple-100 text-xs mt-1">Satisfação geral</p>
+                </div>
+                <Smile className="h-12 w-12 text-purple-200" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Seção 2 - Análise por Habilidades */}
+        {/* Gráficos Interativos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Gráfico de Barras - Habilidades */}
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+                <span>Análise por Habilidades</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={skillsChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="skill" angle={-45} textAnchor="end" height={100} fontSize={12} />
+                  <YAxis domain={[0, 5]} />
+                  <Tooltip />
+                  <Bar dataKey="average" fill="#1e40af" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Pizza - Distribuição por Setor */}
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <PieChart className="h-5 w-5 text-blue-600" />
+                <span>Distribuição por Setor</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPieChart>
+                  <Pie
+                    data={sectorsChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ sector, employees }) => `${sector}: ${employees}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="employees"
+                  >
+                    {sectorsChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Análise por Setor com Tabs */}
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              <span>Análise por Habilidades</span>
+              <Target className="h-5 w-5 text-blue-600" />
+              <span>Análise Detalhada por Setor</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Gráfico de barras simulado */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-slate-900">Média por Habilidade</h4>
-                {dashboardData.skillsAnalysis.averages.slice(0, 5).map((item: any, index: number) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>{item.skill}</span>
-                      <span className="font-medium">{item.average}</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          parseFloat(item.average) >= 4 ? 'bg-green-500' :
-                          parseFloat(item.average) >= 3 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${(parseFloat(item.average) / 5) * 100}%` }}
-                      ></div>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
+                <TabsTrigger value="todos">Todos</TabsTrigger>
+                {sectors.map(sector => (
+                  <TabsTrigger key={sector} value={sector} className="text-xs">
+                    {sector.split(' - ')[0]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              
+              {['todos', ...sectors].map(tabValue => (
+                <TabsContent key={tabValue} value={tabValue} className="mt-4">
+                  <div className="space-y-4">
+                    {/* Resumo do Setor */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <Users className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                            <p className="text-sm text-blue-700">Funcionários</p>
+                            <p className="text-2xl font-bold text-blue-900">
+                              {tabValue === 'todos' ? 
+                                dashboardData.overview.totalEvaluations : 
+                                dashboardData.sectorsAnalysis.find((s: any) => s.sector === tabValue)?.employees || 0
+                              }
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gradient-to-br from-green-50 to-green-100">
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <Award className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                            <p className="text-sm text-green-700">Nota Média</p>
+                            <p className="text-2xl font-bold text-green-900">
+                              {tabValue === 'todos' ? 
+                                dashboardData.overview.overallAverage : 
+                                dashboardData.sectorsAnalysis.find((s: any) => s.sector === tabValue)?.average || '0.0'
+                              }
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100">
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <Trophy className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
+                            <p className="text-sm text-yellow-700">Ranking</p>
+                            <p className="text-2xl font-bold text-yellow-900">
+                              {tabValue === 'todos' ? '#1' : 
+                                `#${dashboardData.sectorsAnalysis
+                                  .sort((a: any, b: any) => parseFloat(b.average) - parseFloat(a.average))
+                                  .findIndex((s: any) => s.sector === tabValue) + 1}`
+                              }
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-semibold text-green-700 mb-2">Top 3 Pontos Fortes</h4>
-                  {dashboardData.skillsAnalysis.topStrengths.map((skill: string, index: number) => (
-                    <Badge key={index} variant="default" className="mr-2 mb-2 bg-green-100 text-green-800">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-red-700 mb-2">Áreas para Melhorar</h4>
-                  {dashboardData.skillsAnalysis.improvements.map((skill: string, index: number) => (
-                    <Badge key={index} variant="destructive" className="mr-2 mb-2 bg-red-100 text-red-800">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
+                </TabsContent>
+              ))}
+            </Tabs>
           </CardContent>
         </Card>
 
-        {/* Seção 3 - Análise por Setor */}
+        {/* Tabela de Funcionários */}
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <PieChart className="h-5 w-5 text-blue-600" />
-                <span>Análise por Setor</span>
+                <Users className="h-5 w-5 text-blue-600" />
+                <span>Funcionários Avaliados</span>
               </div>
-              <Select value={selectedSector} onValueChange={setSelectedSector}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Filtrar por setor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os setores</SelectItem>
-                  {sectors.map(sector => (
-                    <SelectItem key={sector} value={sector}>{sector}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center space-x-2">
+                <Search className="h-4 w-4 text-slate-500" />
+                <Input
+                  placeholder="Buscar funcionário..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-64"
+                />
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -629,120 +915,215 @@ const AdminDashboard = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
+                    <th className="text-left py-3 px-4">Nome</th>
                     <th className="text-left py-3 px-4">Setor</th>
-                    <th className="text-left py-3 px-4">Funcionários</th>
-                    <th className="text-left py-3 px-4">Nota Média</th>
-                    <th className="text-left py-3 px-4">Status</th>
+                    <th className="text-left py-3 px-4">Data</th>
+                    <th className="text-left py-3 px-4">Nota Geral</th>
+                    <th className="text-left py-3 px-4">Progresso</th>
+                    <th className="text-left py-3 px-4">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSectorData.map((sector: any, index: number) => (
+                  {paginatedEmployees.map((employee: any, index: number) => (
                     <tr key={index} className="border-b hover:bg-slate-50">
-                      <td className="py-3 px-4 font-medium">{sector.sector}</td>
-                      <td className="py-3 px-4">{sector.employees}</td>
-                      <td className="py-3 px-4 font-semibold">{sector.average}</td>
+                      <td className="py-3 px-4 font-medium">{employee.name}</td>
+                      <td className="py-3 px-4">{employee.sector}</td>
+                      <td className="py-3 px-4">{new Date(employee.date).toLocaleDateString('pt-BR')}</td>
+                      <td className="py-3 px-4 font-semibold">{employee.overallRating}</td>
                       <td className="py-3 px-4">
-                        <Badge 
-                          variant={parseFloat(sector.average) >= 4 ? "default" : parseFloat(sector.average) >= 3 ? "secondary" : "destructive"}
-                          className={
-                            parseFloat(sector.average) >= 4 ? "bg-green-100 text-green-800" :
-                            parseFloat(sector.average) >= 3 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
-                          }
-                        >
-                          {parseFloat(sector.average) >= 4 ? 'Excelente' : parseFloat(sector.average) >= 3 ? 'Bom' : 'Atenção'}
-                        </Badge>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              employee.overallRating >= 4 ? 'bg-green-500' :
+                              employee.overallRating >= 3 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${(employee.overallRating / 5) * 100}%` }}
+                          ></div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Dialog open={employeeModalOpen} onOpenChange={setEmployeeModalOpen}>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedEmployee(employee)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver Detalhes
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl">
+                            <DialogHeader>
+                              <DialogTitle>Detalhes da Avaliação - {selectedEmployee?.name}</DialogTitle>
+                            </DialogHeader>
+                            {selectedEmployee && (
+                              <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <Card>
+                                    <CardContent className="p-4">
+                                      <div className="text-center">
+                                        <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                                        <p className="text-sm text-slate-600">Funcionário</p>
+                                        <p className="font-semibold">{selectedEmployee.name}</p>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                  <Card>
+                                    <CardContent className="p-4">
+                                      <div className="text-center">
+                                        <Award className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                                        <p className="text-sm text-slate-600">Setor</p>
+                                        <p className="font-semibold">{selectedEmployee.sector}</p>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                  <Card>
+                                    <CardContent className="p-4">
+                                      <div className="text-center">
+                                        <Calendar className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                                        <p className="text-sm text-slate-600">Data</p>
+                                        <p className="font-semibold">{new Date(selectedEmployee.date).toLocaleDateString('pt-BR')}</p>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle>Habilidades Avaliadas</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="space-y-3">
+                                        {skills.map((skill, index) => (
+                                          <div key={index} className="flex items-center justify-between">
+                                            <span className="text-sm">{skill}</span>
+                                            <div className="flex items-center space-x-2">
+                                              <span className="font-medium">{selectedEmployee.skills[skill] || 0}</span>
+                                              <div className="w-20 bg-slate-200 rounded-full h-2">
+                                                <div 
+                                                  className={`h-2 rounded-full ${
+                                                    (selectedEmployee.skills[skill] || 0) >= 4 ? 'bg-green-500' :
+                                                    (selectedEmployee.skills[skill] || 0) >= 3 ? 'bg-yellow-500' : 'bg-red-500'
+                                                  }`}
+                                                  style={{ width: `${((selectedEmployee.skills[skill] || 0) / 5) * 100}%` }}
+                                                ></div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+
+                                  <Card>
+                                    <CardHeader>
+                                      <CardTitle>Conclusão Automática</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="space-y-4">
+                                        <div className="p-3 bg-green-50 rounded-lg">
+                                          <p className="text-sm font-medium text-green-800">🎯 Ponto Forte:</p>
+                                          <p className="text-sm text-green-700">
+                                            {Object.entries(selectedEmployee.skills)
+                                              .sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0] || 'N/A'} 
+                                            (nota {Math.max(...Object.values(selectedEmployee.skills) as number[]) || 0})
+                                          </p>
+                                        </div>
+                                        
+                                        <div className="p-3 bg-red-50 rounded-lg">
+                                          <p className="text-sm font-medium text-red-800">⚠️ Área de Melhoria:</p>
+                                          <p className="text-sm text-red-700">
+                                            {Object.entries(selectedEmployee.skills)
+                                              .sort(([,a], [,b]) => (a as number) - (b as number))[0]?.[0] || 'N/A'} 
+                                            (nota {Math.min(...Object.values(selectedEmployee.skills) as number[]) || 0})
+                                          </p>
+                                        </div>
+                                        
+                                        <div className="p-3 bg-blue-50 rounded-lg">
+                                          <p className="text-sm font-medium text-blue-800">💡 Recomendação:</p>
+                                          <p className="text-sm text-blue-700">
+                                            {selectedEmployee.overallRating >= 4 ? 
+                                              'Manter alto desempenho e considerar liderança' :
+                                              selectedEmployee.overallRating >= 3 ?
+                                              'Foco em desenvolvimento específico' :
+                                              'Plano de melhoria individual necessário'
+                                            }
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            
+            {/* Paginação */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center space-x-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <span className="text-sm">
+                  Página {currentPage} de {totalPages}
+                </span>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Seção 4 - Insights Automáticos */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <Award className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <p className="text-sm text-green-700 font-medium">Melhor Setor</p>
-                <p className="text-lg font-bold text-green-900">{dashboardData.insights.bestSector}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <TrendingUp className="h-8 w-8 text-red-600 mx-auto mb-2" />
-                <p className="text-sm text-red-700 font-medium">Precisa Atenção</p>
-                <p className="text-lg font-bold text-red-900">{dashboardData.insights.needsAttention}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <BarChart3 className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-                <p className="text-sm text-yellow-700 font-medium">Habilidade Crítica</p>
-                <p className="text-lg font-bold text-yellow-900">{dashboardData.insights.criticalSkill}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <LineChart className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <p className="text-sm text-blue-700 font-medium">Recomendação</p>
-                <p className="text-lg font-bold text-blue-900">{dashboardData.insights.recommendation}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Seção 5 - Clima Organizacional */}
+        {/* Insights Automáticos */}
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-              <span>Clima Organizacional</span>
+              <Lightbulb className="h-5 w-5 text-blue-600" />
+              <span>Insights Automáticos</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold mb-4">Satisfação Geral: {dashboardData.climateData.generalSatisfaction}/5</h4>
-                <div className="w-full bg-slate-200 rounded-full h-4 mb-4">
-                  <div 
-                    className="h-4 rounded-full bg-gradient-to-r from-blue-500 to-green-500"
-                    style={{ width: `${(dashboardData.climateData.generalSatisfaction / 5) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="font-semibold mb-4">Distribuição das Notas</h4>
-                {dashboardData.climateData.distribution.map((item: any) => (
-                  <div key={item.rating} className="flex items-center space-x-2 mb-2">
-                    <span className="w-8 text-sm">{item.rating}⭐</span>
-                    <div className="flex-1 bg-slate-200 rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full bg-blue-500"
-                        style={{ width: `${(item.count / 47) * 100}%` }}
-                      ></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {automaticInsights.map((insight, index) => (
+                <Card key={index} className={`bg-gradient-to-br ${insight.color} border-0`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      {insight.icon}
+                      <div>
+                        <p className="font-medium text-sm">{insight.title}</p>
+                        <p className="text-xs text-slate-600 mt-1">{insight.description}</p>
+                      </div>
                     </div>
-                    <span className="text-sm w-8">{item.count}</span>
-                  </div>
-                ))}
-              </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Seção 6 - Exportações */}
+        {/* Exportações */}
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -755,7 +1136,7 @@ const AdminDashboard = () => {
               <Button 
                 onClick={() => exportReport('pdf')}
                 variant="outline"
-                className="flex flex-col space-y-2 h-20"
+                className="flex flex-col space-y-2 h-20 hover:bg-red-50"
               >
                 <FileText className="h-6 w-6 text-red-600" />
                 <span className="text-xs">Relatório PDF</span>
@@ -764,7 +1145,7 @@ const AdminDashboard = () => {
               <Button 
                 onClick={() => exportReport('excel')}
                 variant="outline"
-                className="flex flex-col space-y-2 h-20"
+                className="flex flex-col space-y-2 h-20 hover:bg-green-50"
               >
                 <FileSpreadsheet className="h-6 w-6 text-green-600" />
                 <span className="text-xs">Planilha Excel</span>
@@ -773,7 +1154,7 @@ const AdminDashboard = () => {
               <Button 
                 onClick={() => exportReport('png')}
                 variant="outline"
-                className="flex flex-col space-y-2 h-20"
+                className="flex flex-col space-y-2 h-20 hover:bg-blue-50"
               >
                 <Image className="h-6 w-6 text-blue-600" />
                 <span className="text-xs">Gráficos PNG</span>
@@ -782,7 +1163,7 @@ const AdminDashboard = () => {
               <Button 
                 onClick={() => exportReport('json')}
                 variant="outline"
-                className="flex flex-col space-y-2 h-20"
+                className="flex flex-col space-y-2 h-20 hover:bg-purple-50"
               >
                 <Database className="h-6 w-6 text-purple-600" />
                 <span className="text-xs">Backup JSON</span>
