@@ -114,6 +114,8 @@ const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({
 
   const handleNext = () => {
     if (validateForm()) {
+      // SALVAR DADOS NO LOCALSTORAGE antes de prosseguir
+      saveFormData();
       onNext();
     } else {
       toast({
@@ -122,6 +124,71 @@ const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({
         variant: "destructive",
       });
     }
+  };
+
+  const saveFormData = () => {
+    try {
+      const responses = JSON.parse(localStorage.getItem('evaluationResponses') || '[]');
+      
+      console.log('📝 Dados do formulário a serem salvos:', formData);
+      
+      const newResponse = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        createdAt: new Date().toLocaleDateString('pt-BR'),
+        name: formData.nome || 'Anônimo',
+        sector: formData.setor || 'Não informado',
+        skills: {
+          comunicacao: parseInt(formData.comunicacaoCliente) || parseInt(formData.linguagemJuridica) || 3,
+          trabalhoEquipe: parseInt(formData.trabalhoEquipe) || 3,
+          proatividade: parseInt(formData.proatividade) || 3,
+          pontualidade: parseInt(formData.pontualidade) || 3,
+          conhecimento: parseInt(formData.conhecimentoLegislativo) || 3,
+          gestao: parseInt(formData.importanciaTrabalho) || 3,
+          postura: parseInt(formData.posturaCliente) || parseInt(formData.posturaTrabalho) || 3,
+          organizacao: parseInt(formData.cuidadoPatrimonial) || 3,
+          clima: mapSatisfactionToRating(formData.satisfacaoGeral)
+        },
+        climateData: {
+          satisfacaoGeral: formData.satisfacaoGeral,
+          acolhimentoSetor: formData.acolhimentoSetor,
+          acolhimentoEscritorio: formData.acolhimentoEscritorio,
+          comunicacaoInterna: formData.comunicacaoInterna,
+          sugestoesMelhoria: formData.sugestoesMelhoria
+        },
+        allFormData: formData
+      };
+      
+      responses.push(newResponse);
+      localStorage.setItem('evaluationResponses', JSON.stringify(responses));
+      
+      console.log('✅ Dados salvos no localStorage:', newResponse);
+      console.log('📊 Total de respostas no localStorage:', responses.length);
+      
+      toast({
+        title: "Avaliação salva!",
+        description: `Seus dados foram salvos com sucesso. Total: ${responses.length} avaliações`,
+      });
+      
+    } catch (error) {
+      console.error('❌ Erro ao salvar dados:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar os dados. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const mapSatisfactionToRating = (satisfaction: string): number => {
+    const mapping: Record<string, number> = {
+      'muito_insatisfeito': 1,
+      'insatisfeito': 2,
+      'neutro': 3,
+      'satisfeito': 4,
+      'muito_satisfeito': 5
+    };
+    return mapping[satisfaction] || 3;
   };
 
   const handleInputChange = (field: string, value: any) => {

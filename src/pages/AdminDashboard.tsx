@@ -391,9 +391,30 @@ const AdminDashboard = () => {
   };
 
   const exportReport = (type: string) => {
-    // Implementar exportação
     console.log(`Exportando relatório: ${type}`);
-    // Aqui seria implementada a lógica de exportação real
+    
+    if (type === 'pdf') {
+      window.print();
+    } else if (type === 'excel') {
+      // Simular download de Excel
+      const csvContent = "data:text/csv;charset=utf-8,Nome,Setor,Data,Nota\n" +
+        getEmployeeData().map(emp => 
+          `${emp.name},${emp.sector},${emp.date},${emp.overallRating}`
+        ).join('\n');
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "avaliacoes.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    toast({
+      title: "Exportação realizada",
+      description: `Relatório ${type.toUpperCase()} foi gerado com sucesso.`,
+    });
   };
 
   const handleClearData = () => {
@@ -437,20 +458,49 @@ const AdminDashboard = () => {
     });
   };
 
-  // Preparar dados para gráficos
+  // Preparar dados para gráficos - CORRIGIDO para usar filtro
   const prepareChartData = () => {
-    const skillsChartData = dashboardData.skillsAnalysis.averages.map((item: any) => ({
-      skill: item.skill,
-      average: parseFloat(item.average),
-      color: parseFloat(item.average) >= 4 ? '#10b981' : parseFloat(item.average) >= 3 ? '#f59e0b' : '#ef4444'
-    }));
+    // Filtrar funcionários baseado no setor selecionado
+    const employees = getEmployeeData();
+    const filteredForCharts = selectedSector === 'all' 
+      ? employees 
+      : employees.filter(emp => emp.sector === selectedSector);
 
-    const sectorsChartData = dashboardData.sectorsAnalysis.map((sector: any, index: number) => ({
-      sector: sector.sector,
-      employees: sector.employees,
-      average: parseFloat(sector.average),
+    // Calcular dados das habilidades baseado nos funcionários filtrados
+    const skills = ['comunicacao', 'trabalhoEquipe', 'proatividade', 'pontualidade', 'conhecimento', 'gestao', 'postura', 'organizacao', 'clima'];
+    const skillTotals: Record<string, number[]> = {};
+    
+    filteredForCharts.forEach(emp => {
+      skills.forEach(skill => {
+        if (!skillTotals[skill]) skillTotals[skill] = [];
+        skillTotals[skill].push(emp.skills?.[skill] || 3);
+      });
+    });
+    
+    const skillsChartData = skills.map(skill => {
+      const values = skillTotals[skill] || [3];
+      const average = values.reduce((a, b) => a + b, 0) / values.length;
+      return {
+        skill: skill.charAt(0).toUpperCase() + skill.slice(1),
+        average: Number(average.toFixed(2)),
+        color: average >= 4 ? '#10b981' : average >= 3 ? '#f59e0b' : '#ef4444'
+      };
+    });
+
+    // Calcular dados dos setores baseado nos funcionários filtrados
+    const sectorCounts: Record<string, number> = {};
+    filteredForCharts.forEach(emp => {
+      sectorCounts[emp.sector] = (sectorCounts[emp.sector] || 0) + 1;
+    });
+    
+    const sectorsChartData = Object.entries(sectorCounts).map(([sector, count], index) => ({
+      sector,
+      employees: count,
+      average: 4.2, // Valor exemplo
       fill: CHART_COLORS[index % CHART_COLORS.length]
     }));
+
+    console.log('📊 Dados dos gráficos atualizados:', { selectedSector, filteredForCharts: filteredForCharts.length, skillsChartData, sectorsChartData });
 
     return { skillsChartData, sectorsChartData };
   };
