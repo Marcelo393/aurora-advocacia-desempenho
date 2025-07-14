@@ -43,6 +43,11 @@ class SoundService {
     await this.playTone(440, 0.25, 'sine', 0.15);
   }
 
+  async playTransition() {
+    // Som de transição suave
+    await this.playTone(600, 0.2, 'sine', 0.1);
+  }
+
   async playSuccessSound() {
     if (!this.soundEnabled) return;
     
