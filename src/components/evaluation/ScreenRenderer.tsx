@@ -26,6 +26,23 @@ const ScreenRenderer: React.FC<ScreenRendererProps> = ({
   onPrev,
   isTransitioning
 }) => {
+  const convertToFormDataToSend = (data: FormData) => {
+    return {
+      ...data,
+      pressaoContexto: data.pressaoOutros || '',
+      vestimenta: '',
+      cuidadoCozinha: '',
+      cuidadoCopa: '',
+      // Add other missing fields with defaults
+      experienciaExtra: data.experienciaExtra || ''
+    };
+  };
+
+  const handleGoHome = () => {
+    // Reset to first screen
+    window.location.reload();
+  };
+
   const renderCurrentScreen = () => {
     switch (currentScreen) {
       case 1:
@@ -64,9 +81,8 @@ const ScreenRenderer: React.FC<ScreenRendererProps> = ({
       case 5:
         return (
           <ConfirmationPage 
-            formData={formData}
-            onFinish={onNext}
-            onPrev={onPrev}
+            formData={convertToFormDataToSend(formData)}
+            onGoHome={handleGoHome}
           />
         );
       default:
