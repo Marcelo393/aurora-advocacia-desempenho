@@ -110,6 +110,20 @@ const Index = () => {
         await soundService.playProgressSound();
       }
       
+      // Save form data when moving to next page
+      if (currentScreen >= 2) {
+        const savedEvaluations = JSON.parse(localStorage.getItem('evaluationData') || '[]');
+        const existingIndex = savedEvaluations.findIndex((item: any) => item.nome === formData.nome);
+        
+        if (existingIndex >= 0) {
+          savedEvaluations[existingIndex] = { ...formData, timestamp: new Date().toISOString() };
+        } else {
+          savedEvaluations.push({ ...formData, timestamp: new Date().toISOString() });
+        }
+        
+        localStorage.setItem('evaluationData', JSON.stringify(savedEvaluations));
+      }
+      
       setIsTransitioning(true);
       setTimeout(() => {
         setCurrentScreen(currentScreen + 1);
@@ -161,8 +175,6 @@ const Index = () => {
   if (currentScreen >= screens.length) {
     return <ConfirmationPage formData={formData} onGoHome={goHome} />;
   }
-
-  const CurrentScreenComponent = screens[currentScreen].component;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 transition-all duration-500">
@@ -265,14 +277,20 @@ const Index = () => {
               {currentScreen === 1 ? (
                 <PresentationPage onNext={nextPage} />
               ) : (
-                <CurrentScreenComponent 
-                  formData={formData}
-                  updateFormData={updateFormData}
-                  onNext={nextPage}
-                  onPrev={prevPage}
-                  canGoBack={currentScreen > 2}
-                  isLastPage={currentScreen === screens.length - 1}
-                />
+                // Render form pages with proper props
+                (() => {
+                  const CurrentScreenComponent = screens[currentScreen].component;
+                  return (
+                    <CurrentScreenComponent 
+                      formData={formData}
+                      updateFormData={updateFormData}
+                      onNext={nextPage}
+                      onPrev={prevPage}
+                      canGoBack={currentScreen > 2}
+                      isLastPage={currentScreen === screens.length - 1}
+                    />
+                  );
+                })()
               )}
             </div>
           </CardContent>
