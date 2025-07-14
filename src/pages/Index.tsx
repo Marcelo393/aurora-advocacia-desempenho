@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -276,22 +277,31 @@ const Index = () => {
             <div className={`transition-all duration-300 ${isTransitioning ? 'translate-x-4 opacity-0' : 'translate-x-0 opacity-100'}`}>
               {currentScreen === 1 ? (
                 <PresentationPage onNext={nextPage} />
-              ) : (
-                // Render form pages with proper props
-                (() => {
-                  const CurrentScreenComponent = screens[currentScreen].component;
-                  return (
-                    <CurrentScreenComponent 
-                      formData={formData}
-                      updateFormData={updateFormData}
-                      onNext={nextPage}
-                      onPrev={prevPage}
-                      canGoBack={currentScreen > 2}
-                      isLastPage={currentScreen === screens.length - 1}
-                    />
-                  );
-                })()
-              )}
+              ) : currentScreen === 2 ? (
+                <DataSkillsPage 
+                  formData={formData}
+                  updateFormData={updateFormData}
+                  onNext={nextPage}
+                  onPrev={prevPage}
+                  canGoBack={currentScreen > 2}
+                />
+              ) : currentScreen === 3 ? (
+                <ManagementFeedbackPage 
+                  formData={formData}
+                  updateFormData={updateFormData}
+                  onNext={nextPage}
+                  onPrev={prevPage}
+                  canGoBack={currentScreen > 2}
+                />
+              ) : currentScreen === 4 ? (
+                <ClimateCollectionPage 
+                  formData={formData}
+                  updateFormData={updateFormData}
+                  onNext={nextPage}
+                  onPrev={prevPage}
+                  canGoBack={currentScreen > 2}
+                />
+              ) : null}
             </div>
           </CardContent>
         </Card>
