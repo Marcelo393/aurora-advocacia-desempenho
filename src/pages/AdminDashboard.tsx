@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, BarChart3, Download, PieChart, TrendingUp, UserCheck, 
   Award, Calendar, Star, MessageSquare, Target, AlertTriangle, 
-  Trophy, Lightbulb, AlertCircle, Bot, Smile, Activity, Clock 
+  Trophy, Lightbulb, AlertCircle, Bot, Smile, Activity 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,15 +78,14 @@ const AdminDashboard = () => {
     const evaluations = JSON.parse(localStorage.getItem('evaluations') || '[]');
     return evaluations.map((evaluation: any, index: number) => ({
       id: index,
-      name: evaluation.nome || evaluation.name,
-      sector: evaluation.setor || evaluation.sector,
-      date: evaluation.completedAt || evaluation.date,
+      name: evaluation.name,
+      sector: evaluation.sector,
+      date: evaluation.date,
       ratings: evaluation.ratings,
-      climaOrganizacional: evaluation.satisfacaoGeral || evaluation.climaOrganizacional,
-      responseTimeMinutes: evaluation.responseTimeMinutes,
+      climaOrganizacional: evaluation.climaOrganizacional,
       overallRating: parseFloat(
-        ((Object.values(evaluation.ratings || {}) as number[]).reduce((a: number, b: number) => a + b, 0) / 
-         Object.values(evaluation.ratings || {}).length).toFixed(1)
+        ((Object.values(evaluation.ratings) as number[]).reduce((a: number, b: number) => a + b, 0) / 
+         Object.values(evaluation.ratings).length).toFixed(1)
       )
     }));
   };
@@ -117,27 +116,14 @@ const AdminDashboard = () => {
       ? employees 
       : employees.filter(emp => emp.sector === selectedSector);
 
-    // Calcular dados dos gráficos de habilidades com cores por performance
+    // Calcular dados dos gráficos de habilidades
     const skillNames = Object.keys(employees[0]?.ratings || {});
     const skillsChartData = skillNames.map(skill => {
       const average = filteredEmployees.reduce((sum, emp) => sum + emp.ratings[skill], 0) / filteredEmployees.length;
-      const roundedAvg = parseFloat(average.toFixed(1));
-      
-      // Sistema de cores por performance
-      let fill = '#ef4444'; // Vermelho para < 3.0
-      if (roundedAvg >= 4.5) fill = '#10b981'; // Verde para 4.5-5.0 (Excelente)
-      else if (roundedAvg >= 4.0) fill = '#3b82f6'; // Azul para 4.0-4.4 (Muito Bom)
-      else if (roundedAvg >= 3.5) fill = '#f59e0b'; // Amarelo para 3.5-3.9 (Bom)
-      else if (roundedAvg >= 3.0) fill = '#f97316'; // Laranja para 3.0-3.4 (Regular)
-      
       return {
         skill: skill,
-        average: roundedAvg,
-        fill: fill,
-        classification: roundedAvg >= 4.5 ? 'Excelente' : 
-                        roundedAvg >= 4.0 ? 'Muito Bom' : 
-                        roundedAvg >= 3.5 ? 'Bom' : 
-                        roundedAvg >= 3.0 ? 'Regular' : 'Precisa Atenção'
+        average: parseFloat(average.toFixed(1)),
+        color: average >= 4 ? '#10b981' : average >= 3 ? '#f59e0b' : '#ef4444'
       };
     });
 
@@ -267,7 +253,7 @@ const AdminDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {/* Participação */}
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
                 <CardContent className="p-4">
@@ -323,38 +309,6 @@ const AdminDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Tempo Médio de Resposta */}
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <Clock className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                    <p className="text-sm text-purple-700">⏱️ Tempo Médio</p>
-                    <div className="space-y-1">
-                      {(() => {
-                        const sectorTimes = new Map();
-                        getEmployeeData().forEach(emp => {
-                          if (!sectorTimes.has(emp.sector)) {
-                            sectorTimes.set(emp.sector, []);
-                          }
-                          if (emp.responseTimeMinutes) {
-                            sectorTimes.get(emp.sector).push(emp.responseTimeMinutes);
-                          }
-                        });
-                        
-                        return Array.from(sectorTimes.entries()).map(([sector, times]: [string, number[]]) => {
-                          const avgTime = times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0;
-                          return (
-                            <p key={sector} className="text-xs text-purple-700">
-                              {sector}: {avgTime}min
-                            </p>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </CardContent>
         </Card>
@@ -390,55 +344,15 @@ const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={dashboardData.skillsChartData}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="skill" angle={-45} textAnchor="end" height={100} />
                   <YAxis domain={[0, 5]} />
-                  <Tooltip 
-                    formatter={(value: any, name: any, props: any) => [
-                      `${value}/5 - ${props.payload.classification}`, 
-                      'Nota'
-                    ]}
-                    labelStyle={{ color: '#1e293b' }}
-                    contentStyle={{ 
-                      backgroundColor: '#f8fafc', 
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="average" 
-                    radius={[4, 4, 0, 0]}
-                    stroke="#ffffff"
-                    strokeWidth={1}
-                  />
+                  <Tooltip />
+                  <Bar dataKey="average" fill="#3b82f6" />
                 </BarChart>
               </ResponsiveContainer>
-              
-              {/* Legenda de Cores */}
-              <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-green-500 rounded"></div>
-                  <span>4.5-5.0 Excelente</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                  <span>4.0-4.4 Muito Bom</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                  <span>3.5-3.9 Bom</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-orange-500 rounded"></div>
-                  <span>3.0-3.4 Regular</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-red-500 rounded"></div>
-                  <span>&lt;3.0 Precisa Atenção</span>
-                </div>
-              </div>
             </CardContent>
           </Card>
 
