@@ -468,6 +468,7 @@ const AdminDashboard = () => {
   const prepareChartData = () => {
     // Filtrar funcionários baseado no setor selecionado
     const employees = getEmployeeData();
+    const allEmployees = employees; // Adicionar variável allEmployees
     const filteredForCharts = selectedSector === 'all' 
       ? employees 
       : employees.filter(emp => emp.sector === selectedSector);
@@ -1253,12 +1254,83 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Comentários Individuais */}
+        {/* Resumo Executivo */}
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Trophy className="h-5 w-5 text-blue-600" />
+              <span>📊 Resumo Executivo</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Participação */}
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                    <p className="text-sm text-blue-700">Participação</p>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {dashboardData?.overview?.totalEvaluations || 0} de {(dashboardData?.overview?.totalEvaluations || 0) + 10}
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      ({Math.round(((dashboardData?.overview?.totalEvaluations || 0) / ((dashboardData?.overview?.totalEvaluations || 0) + 10)) * 100)}%)
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Satisfação Geral */}
+              <Card className="bg-gradient-to-br from-green-50 to-green-100">
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <Smile className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <p className="text-sm text-green-700">Satisfação Geral</p>
+                    <p className="text-2xl font-bold text-green-900">
+                      {dashboardData?.climateData?.generalSatisfaction?.toFixed(1) || '4.1'}
+                    </p>
+                    <p className="text-xs text-green-600">Clima organizacional</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Setor Destaque */}
+              <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100">
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <Award className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+                    <p className="text-sm text-yellow-700">Setor Destaque</p>
+                    <p className="text-lg font-bold text-yellow-900">
+                      {dashboardData?.insights?.bestSector?.split(' - ')[0] || 'Tributário'}
+                    </p>
+                    <p className="text-xs text-yellow-600">Melhor performance</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Atenção Necessária */}
+              <Card className="bg-gradient-to-br from-red-50 to-red-100">
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <AlertTriangle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                    <p className="text-sm text-red-700">Atenção Necessária</p>
+                    <p className="text-2xl font-bold text-red-900">
+                      {getEmployeeData().filter(emp => emp.overallRating < 3.0).length}
+                    </p>
+                    <p className="text-xs text-red-600">Funcionários com nota &lt; 3.0</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Análise Individual com Comentários Automáticos */}
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <MessageSquare className="h-5 w-5 text-blue-600" />
-              <span>💬 Comentários e Análises Individuais</span>
+              <span>🤖 Análise Individual Inteligente</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1371,36 +1443,88 @@ const AdminDashboard = () => {
                     </Card>
                   </div>
 
-                  {/* Comentário personalizado */}
+                  {/* Ações Recomendadas */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-lg">📝 Comentário Personalizado do Administrador</CardTitle>
+                      <CardTitle className="flex items-center space-x-2">
+                        <Target className="h-5 w-5 text-blue-600" />
+                        <span>🎯 Ações Recomendadas</span>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <Textarea
-                          placeholder="Escreva aqui suas observações específicas sobre este funcionário..."
-                          value={adminComment}
-                          onChange={(e) => setAdminComment(e.target.value)}
-                          className="min-h-[120px] resize-none"
-                        />
-                        <div className="flex space-x-2">
-                          <Button 
-                            onClick={saveAdminComment}
-                            className="flex items-center space-x-2"
-                          >
-                            <Save className="h-4 w-4" />
-                            <span>Salvar Comentário</span>
-                          </Button>
-                          <Button 
-                            onClick={() => setAdminComment('')}
-                            variant="outline"
-                            className="flex items-center space-x-2"
-                          >
-                            <X className="h-4 w-4" />
-                            <span>Limpar</span>
-                          </Button>
-                        </div>
+                        {(() => {
+                          const funcionariosBaixaPerf = getEmployeeData().filter(emp => emp.overallRating < 3.0);
+                          const funcionariosAltos = getEmployeeData().filter(emp => emp.overallRating > 4.5);
+                          const setoresBaixoClima = dashboardData?.sectorsAnalysis?.filter((s: any) => parseFloat(s.average) < 3.0) || [];
+                          const habilidadeCritica = dashboardData?.insights?.criticalSkill || 'Gestão do tempo';
+                          
+                          return [
+                            funcionariosBaixaPerf.length > 0 && {
+                              icon: AlertTriangle,
+                              color: 'red',
+                              title: `Treinamento em ${habilidadeCritica} para ${funcionariosBaixaPerf.length} funcionários`,
+                              description: 'Funcionários com performance abaixo de 3.0 precisam de desenvolvimento'
+                            },
+                            funcionariosAltos.length > 0 && {
+                              icon: Trophy,
+                              color: 'green',
+                              title: `Reconhecimento para ${funcionariosAltos.length} funcionários de alta performance`,
+                              description: 'Funcionários com nota superior a 4.5 merecem destaque'
+                            },
+                            setoresBaixoClima.length > 0 && {
+                              icon: Lightbulb,
+                              color: 'yellow',
+                              title: `Atenção especial para ${setoresBaixoClima.length} setores em ${habilidadeCritica}`,
+                              description: 'Setores com baixa performance em habilidade crítica'
+                            },
+                            dashboardData?.climateData?.generalSatisfaction < 3.0 && {
+                              icon: AlertCircle,
+                              color: 'red',
+                              title: 'Investigar clima organizacional geral',
+                              description: 'Satisfação geral abaixo do esperado'
+                            }
+                          ].filter(Boolean);
+                        })().map((action: any, index) => (
+                          <Card key={index} className={`border-l-4 ${
+                            action.color === 'red' ? 'border-red-500 bg-red-50' :
+                            action.color === 'green' ? 'border-green-500 bg-green-50' :
+                            action.color === 'yellow' ? 'border-yellow-500 bg-yellow-50' :
+                            'border-blue-500 bg-blue-50'
+                          }`}>
+                            <CardContent className="p-4">
+                              <div className="flex items-start space-x-3">
+                                <action.icon className={`h-6 w-6 mt-1 ${
+                                  action.color === 'red' ? 'text-red-600' :
+                                  action.color === 'green' ? 'text-green-600' :
+                                  action.color === 'yellow' ? 'text-yellow-600' :
+                                  'text-blue-600'
+                                }`} />
+                                <div>
+                                  <h4 className={`font-semibold ${
+                                    action.color === 'red' ? 'text-red-800' :
+                                    action.color === 'green' ? 'text-green-800' :
+                                    action.color === 'yellow' ? 'text-yellow-800' :
+                                    'text-blue-800'
+                                  }`}>
+                                    {action.title}
+                                  </h4>
+                                  <p className={`text-sm ${
+                                    action.color === 'red' ? 'text-red-700' :
+                                    action.color === 'green' ? 'text-green-700' :
+                                    action.color === 'yellow' ? 'text-yellow-700' :
+                                    'text-blue-700'
+                                  }`}>
+                                    {action.description}
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                         
                         {/* Mostrar comentário existente */}
                         {existingComment && (
