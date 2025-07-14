@@ -266,10 +266,29 @@ const Index = () => {
         }`}>
           <CardContent className="p-8">
             <div className={`transition-all duration-300 ${isTransitioning ? 'translate-x-4 opacity-0' : 'translate-x-0 opacity-100'}`}>
-              {currentScreen === 1 ? (
+              {currentScreen === 1 && (
                 <PresentationPage onNext={nextPage} />
-              ) : (
-                <CurrentScreenComponent 
+              )}
+              {currentScreen === 2 && (
+                <DataSkillsPage 
+                  formData={formData}
+                  updateFormData={updateFormData}
+                  onNext={nextPage}
+                  onPrev={prevPage}
+                  canGoBack={currentScreen > 2}
+                />
+              )}
+              {currentScreen === 3 && (
+                <ManagementFeedbackPage 
+                  formData={formData}
+                  updateFormData={updateFormData}
+                  onNext={nextPage}
+                  onPrev={prevPage}
+                  canGoBack={currentScreen > 2}
+                />
+              )}
+              {currentScreen === 4 && (
+                <ClimateCollectionPage 
                   formData={formData}
                   updateFormData={updateFormData}
                   onNext={nextPage}
