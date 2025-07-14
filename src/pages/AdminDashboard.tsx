@@ -16,14 +16,22 @@ import {
   FileText,
   FileSpreadsheet,
   Image,
-  Database
+  Database,
+  Trash2,
+  Shield,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedSector, setSelectedSector] = useState('all');
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [hasRealData, setHasRealData] = useState(false);
 
   // Setores disponíveis
   const sectors = [
@@ -62,14 +70,27 @@ const AdminDashboard = () => {
 
   const loadDashboardData = () => {
     // Tentar carregar dados reais do localStorage
-    const savedData = localStorage.getItem('evaluationData');
+    const savedData = localStorage.getItem('evaluationResponses');
     
     if (savedData) {
       // Processar dados reais
-      const evaluations = JSON.parse(savedData);
-      setDashboardData(processRealData(evaluations));
+      try {
+        const evaluations = JSON.parse(savedData);
+        if (evaluations && evaluations.length > 0) {
+          setHasRealData(true);
+          setDashboardData(processRealData(evaluations));
+        } else {
+          setHasRealData(false);
+          setDashboardData(generateMockData());
+        }
+      } catch (error) {
+        console.error('Erro ao processar dados:', error);
+        setHasRealData(false);
+        setDashboardData(generateMockData());
+      }
     } else {
       // Usar dados mock para demonstração
+      setHasRealData(false);
       setDashboardData(generateMockData());
     }
   };
@@ -144,38 +165,164 @@ const AdminDashboard = () => {
   };
 
   const calculateAverageTime = (evaluations: any[]) => {
-    // Implementar cálculo real
-    return '12 min';
+    // Implementar cálculo real baseado em timestamps
+    if (evaluations.length === 0) return '0 min';
+    const totalTime = evaluations.reduce((sum, evaluation) => sum + (evaluation.duration || 10), 0);
+    const average = Math.round(totalTime / evaluations.length);
+    return `${average} min`;
   };
 
   const calculateOverallAverage = (evaluations: any[]) => {
-    // Implementar cálculo real
-    return 4.2;
+    if (evaluations.length === 0) return 0;
+    
+    let totalSum = 0;
+    let totalCount = 0;
+    
+    evaluations.forEach(evaluation => {
+      // Somar todas as notas das habilidades
+      skills.forEach(skill => {
+        const rating = evaluation.skills?.[skill];
+        if (rating) {
+          totalSum += rating;
+          totalCount++;
+        }
+      });
+    });
+    
+    return totalCount > 0 ? parseFloat((totalSum / totalCount).toFixed(1)) : 0;
   };
 
   const getLastResponse = (evaluations: any[]) => {
-    // Implementar busca real
-    return '2 horas atrás';
+    if (evaluations.length === 0) return 'Nenhuma resposta';
+    
+    const sorted = evaluations.sort((a, b) => new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime());
+    const lastResponse = sorted[0];
+    const lastDate = new Date(lastResponse.timestamp || lastResponse.createdAt || Date.now());
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Há menos de 1 hora';
+    if (diffInHours === 1) return 'Há 1 hora';
+    if (diffInHours < 24) return `Há ${diffInHours} horas`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays === 1) return 'Há 1 dia';
+    return `Há ${diffInDays} dias`;
   };
 
   const calculateSkillsAnalysis = (evaluations: any[]) => {
-    // Implementar análise real
-    return generateMockData().skillsAnalysis;
+    if (evaluations.length === 0) return generateMockData().skillsAnalysis;
+    
+    const skillAverages = skills.map(skill => {
+      const ratings = evaluations.map(evaluation => evaluation.skills?.[skill]).filter(Boolean);
+      const average = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
+      return { skill, average: average.toFixed(1) };
+    });
+    
+    // Ordenar por média para identificar pontos fortes e fracos
+    const sortedSkills = skillAverages.sort((a, b) => parseFloat(b.average) - parseFloat(a.average));
+    
+    return {
+      averages: skillAverages,
+      topStrengths: sortedSkills.slice(0, 3).map(s => s.skill),
+      improvements: sortedSkills.slice(-3).map(s => s.skill)
+    };
   };
 
   const calculateSectorsAnalysis = (evaluations: any[]) => {
-    // Implementar análise real
-    return generateMockData().sectorsAnalysis;
+    if (evaluations.length === 0) return generateMockData().sectorsAnalysis;
+    
+    const sectorData = sectors.map(sector => {
+      const sectorEvaluations = evaluations.filter(evaluation => evaluation.sector === sector);
+      const employees = sectorEvaluations.length;
+      
+      if (employees === 0) {
+        return { sector, employees: 0, average: '0.0' };
+      }
+      
+      let totalSum = 0;
+      let totalCount = 0;
+      
+      sectorEvaluations.forEach(evaluation => {
+        skills.forEach(skill => {
+          const rating = evaluation.skills?.[skill];
+          if (rating) {
+            totalSum += rating;
+            totalCount++;
+          }
+        });
+      });
+      
+      const average = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : '0.0';
+      return { sector, employees, average };
+    });
+    
+    return sectorData;
   };
 
   const calculateClimateData = (evaluations: any[]) => {
-    // Implementar análise real
-    return generateMockData().climateData;
+    if (evaluations.length === 0) return generateMockData().climateData;
+    
+    const climateRatings = evaluations.map(evaluation => evaluation.climateRating).filter(Boolean);
+    
+    if (climateRatings.length === 0) {
+      return generateMockData().climateData;
+    }
+    
+    const generalSatisfaction = climateRatings.reduce((sum, rating) => sum + rating, 0) / climateRatings.length;
+    
+    // Criar distribuição das notas
+    const distribution = [1, 2, 3, 4, 5].map(rating => ({
+      rating,
+      count: climateRatings.filter(r => r === rating).length
+    }));
+    
+    return {
+      generalSatisfaction: parseFloat(generalSatisfaction.toFixed(1)),
+      distribution
+    };
   };
 
   const generateInsights = (evaluations: any[]) => {
-    // Implementar insights reais
-    return generateMockData().insights;
+    if (evaluations.length === 0) return generateMockData().insights;
+    
+    const sectorsAnalysis = calculateSectorsAnalysis(evaluations);
+    const skillsAnalysis = calculateSkillsAnalysis(evaluations);
+    
+    // Melhor setor
+    const bestSector = sectorsAnalysis.reduce((best, current) => 
+      parseFloat(current.average) > parseFloat(best.average) ? current : best
+    );
+    
+    // Setor que precisa atenção
+    const needsAttention = sectorsAnalysis.reduce((worst, current) => 
+      parseFloat(current.average) < parseFloat(worst.average) && current.employees > 0 ? current : worst
+    );
+    
+    // Habilidade crítica (menor média)
+    const criticalSkill = skillsAnalysis.averages.reduce((worst, current) => 
+      parseFloat(current.average) < parseFloat(worst.average) ? current : worst
+    );
+    
+    // Recomendação baseada na habilidade crítica
+    const skillRecommendations: { [key: string]: string } = {
+      'Comunicação': 'Treinamento em comunicação eficaz',
+      'Trabalho em equipe': 'Workshop de colaboração',
+      'Resolução de problemas': 'Curso de metodologias ágeis',
+      'Gestão do tempo': 'Treinamento em produtividade',
+      'Adaptabilidade': 'Programa de gestão de mudanças',
+      'Liderança': 'Desenvolvimento de liderança',
+      'Conhecimento técnico': 'Capacitação técnica especializada',
+      'Iniciativa': 'Programa de inovação e proatividade',
+      'Relacionamento interpessoal': 'Treinamento em soft skills'
+    };
+    
+    return {
+      bestSector: bestSector.sector,
+      needsAttention: needsAttention.sector,
+      criticalSkill: criticalSkill.skill,
+      recommendation: skillRecommendations[criticalSkill.skill] || 'Avaliação individualizada'
+    };
   };
 
   const handleLogout = () => {
@@ -187,6 +334,47 @@ const AdminDashboard = () => {
     // Implementar exportação
     console.log(`Exportando relatório: ${type}`);
     // Aqui seria implementada a lógica de exportação real
+  };
+
+  const handleClearData = () => {
+    localStorage.removeItem('evaluationResponses');
+    setHasRealData(false);
+    setDashboardData(generateMockData());
+    toast({
+      title: "Dados limpos",
+      description: "Todos os dados de avaliação foram removidos do sistema.",
+    });
+  };
+
+  const generateTestData = () => {
+    const testData = [];
+    const names = ['João Silva', 'Maria Santos', 'Pedro Oliveira', 'Ana Costa', 'Carlos Souza'];
+    
+    for (let i = 0; i < 5; i++) {
+      const evaluation = {
+        id: `test-${i}`,
+        name: names[i],
+        sector: sectors[i % sectors.length],
+        timestamp: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
+        duration: Math.floor(Math.random() * 10) + 8,
+        skills: {},
+        climateRating: Math.floor(Math.random() * 5) + 1
+      };
+      
+      skills.forEach(skill => {
+        evaluation.skills[skill] = Math.floor(Math.random() * 5) + 1;
+      });
+      
+      testData.push(evaluation);
+    }
+    
+    localStorage.setItem('evaluationResponses', JSON.stringify(testData));
+    setHasRealData(true);
+    setDashboardData(processRealData(testData));
+    toast({
+      title: "Dados de teste gerados",
+      description: "5 avaliações de teste foram criadas para demonstração.",
+    });
   };
 
   if (!dashboardData) {
@@ -219,14 +407,91 @@ const AdminDashboard = () => {
                 <p className="text-blue-200">Morestoni Sociedade de Advogados</p>
               </div>
             </div>
-            <Button 
-              onClick={handleLogout}
-              variant="ghost"
-              className="text-white hover:bg-white/10"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            <div className="flex items-center space-x-4">
+              {hasRealData && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="ghost"
+                      className="text-red-200 hover:bg-red-500/20 hover:text-red-100 border border-red-300/30"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Limpar Dados
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center space-x-2">
+                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                        <span>Limpar Dados de Teste</span>
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação vai remover permanentemente todos os dados de avaliação salvos no sistema. 
+                        Você tem certeza que deseja continuar?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleClearData}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Sim, limpar dados
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <Button 
+                onClick={handleLogout}
+                variant="ghost"
+                className="text-white hover:bg-white/10"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Info Bar */}
+      <div className="bg-white border-b border-slate-200 py-4 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4 text-slate-500" />
+                <span className="text-sm text-slate-600">
+                  {new Date().toLocaleDateString('pt-BR', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Shield className="h-4 w-4 text-slate-500" />
+                <span className="text-sm text-slate-600">
+                  {hasRealData ? 'Dados Reais' : 'Dados de Demonstração'}
+                </span>
+              </div>
+              {!hasRealData && (
+                <Button 
+                  onClick={generateTestData}
+                  size="sm"
+                  variant="outline"
+                  className="text-blue-600 hover:bg-blue-50 border-blue-200"
+                >
+                  <Database className="h-4 w-4 mr-2" />
+                  Gerar Dados de Teste
+                </Button>
+              )}
+            </div>
+            <div className="text-sm text-slate-500">
+              Total de respostas: {dashboardData.overview.totalEvaluations}
+            </div>
           </div>
         </div>
       </div>

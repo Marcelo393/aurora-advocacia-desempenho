@@ -17,6 +17,8 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
   const handleAdminLogin = () => {
     if (adminPassword === 'morestoni2025') {
       setShowAdminModal(false);
+      // Definir autenticação no sessionStorage
+      sessionStorage.setItem('adminAuthenticated', 'true');
       navigate('/admin');
     } else {
       setAdminError('Senha incorreta');
