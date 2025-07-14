@@ -15,6 +15,7 @@ interface ClimateCollectionPageProps {
   onPrev: () => void;
   canGoBack: boolean;
   isLastPage: boolean;
+  startTime?: number | null;
 }
 
 const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({ 
@@ -23,7 +24,8 @@ const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({
   onNext, 
   onPrev, 
   canGoBack,
-  isLastPage 
+  isLastPage,
+  startTime 
 }) => {
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -132,12 +134,17 @@ const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({
       
       console.log('📝 Dados do formulário a serem salvos:', formData);
       
+      // Calcular tempo de resposta
+      const endTime = Date.now();
+      const responseTime = startTime ? Math.round((endTime - startTime) / 1000 / 60) : null; // tempo em minutos
+      
       const newResponse = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
         createdAt: new Date().toLocaleDateString('pt-BR'),
         name: formData.nome || 'Anônimo',
         sector: formData.setor || 'Não informado',
+        responseTimeMinutes: responseTime,
         skills: {
           comunicacao: parseInt(formData.comunicacaoCliente) || parseInt(formData.linguagemJuridica) || 3,
           trabalhoEquipe: parseInt(formData.trabalhoEquipe) || 3,

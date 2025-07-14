@@ -9,9 +9,10 @@ import { soundService } from '@/services/soundService';
 interface ConfirmationPageProps {
   formData: FormDataToSend;
   onGoHome: () => void;
+  startTime?: number | null;
 }
 
-const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome }) => {
+const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome, startTime }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [completionTime] = useState(new Date());
