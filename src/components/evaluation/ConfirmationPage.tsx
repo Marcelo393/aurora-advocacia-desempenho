@@ -1,14 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { CheckCircle, Download, Calendar, FileText, Sparkles, Clock, Home, BarChart3, Lock } from 'lucide-react';
+import { CheckCircle, Download, Mail, Calendar, FileText, Sparkles, Clock, Home } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generatePDF, FormDataToSend } from '@/services/pdfService';
 import { soundService } from '@/services/soundService';
-import { useNavigate } from 'react-router-dom';
 
 interface ConfirmationPageProps {
   formData: FormDataToSend;
@@ -20,9 +16,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
   const [showConfetti, setShowConfetti] = useState(false);
   const [completionTime] = useState(new Date());
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showManagerModal, setShowManagerModal] = useState(false);
-  const [managerPassword, setManagerPassword] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Triggering celebration animation and sound
@@ -64,31 +57,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
     } finally {
       setIsGeneratingPDF(false);
     }
-  };
-
-  const handleManagerLogin = () => {
-    if (managerPassword === 'morestoni2025') {
-      soundService.playSuccessSound();
-      toast({
-        title: "Acesso autorizado!",
-        description: "Redirecionando para o dashboard administrativo...",
-      });
-      
-      setTimeout(() => {
-        navigate('/admin-dashboard');
-      }, 1000);
-    } else {
-      toast({
-        title: "Senha incorreta",
-        description: "Verifique a senha e tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleManagerModalOpen = () => {
-    setShowManagerModal(true);
-    soundService.playTransition();
   };
 
   const estimatedTime = Math.ceil(Math.random() * 5) + 8; // 9-13 minutes
@@ -227,7 +195,7 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
               </div>
             </div>
 
-            <div className="flex flex-col items-center space-y-4">
+            <div className="flex justify-center">
               <Button 
                 onClick={handleDownloadPDF}
                 disabled={isGeneratingPDF}
@@ -245,16 +213,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
                     Baixar PDF da Avaliação
                   </>
                 )}
-              </Button>
-
-              <Button 
-                onClick={handleManagerModalOpen}
-                variant="outline"
-                className="border-2 border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400 px-6 py-3 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-              >
-                <Lock className="mr-2 h-4 w-4" />
-                🔐 Área do Gestor
-                <BarChart3 className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </CardContent>
@@ -311,50 +269,6 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
           </Button>
         </div>
       </div>
-
-      {/* Manager Login Modal */}
-      <Dialog open={showManagerModal} onOpenChange={setShowManagerModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-slate-800 flex items-center justify-center space-x-2">
-              <Lock className="h-6 w-6 text-blue-600" />
-              <span>Área do Gestor</span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="text-center text-sm text-slate-600">
-              <p>Morestoni Sociedade de Advogados</p>
-              <p className="mt-2">Digite a senha de acesso ao dashboard administrativo</p>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Senha de Acesso</label>
-              <Input
-                type="password"
-                value={managerPassword}
-                onChange={(e) => setManagerPassword(e.target.value)}
-                placeholder="Digite a senha"
-                onKeyPress={(e) => e.key === 'Enter' && handleManagerLogin()}
-                className="w-full"
-              />
-            </div>
-            <div className="flex space-x-2">
-              <Button 
-                onClick={() => setShowManagerModal(false)}
-                variant="outline"
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleManagerLogin}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                Acessar Dashboard
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <style>{`
         .hover-lift {
