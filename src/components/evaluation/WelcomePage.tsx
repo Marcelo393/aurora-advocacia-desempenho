@@ -1,13 +1,33 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Scale, Award, Users } from 'lucide-react';
+import { ChevronRight, Scale, Award, Users, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface WelcomePageProps {
   onStart: () => void;
 }
 
 const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
+  const navigate = useNavigate();
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
+
+  const handleAdminLogin = () => {
+    if (adminPassword === 'morestoni2025') {
+      setShowAdminModal(false);
+      navigate('/admin');
+    } else {
+      setAdminError('Senha incorreta');
+    }
+  };
+
+  const closeAdminModal = () => {
+    setShowAdminModal(false);
+    setAdminPassword('');
+    setAdminError('');
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 relative overflow-hidden">
       {/* Padrão geométrico de fundo */}
@@ -108,6 +128,72 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
           </div>
         </div>
       </div>
+
+      {/* Botão de administrador discreto */}
+      <button
+        onClick={() => setShowAdminModal(true)}
+        className="fixed bottom-5 left-5 text-xs text-slate-500 bg-slate-100 bg-opacity-80 px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors backdrop-blur-sm border border-slate-300/50"
+      >
+        Área do Administrador
+      </button>
+
+      {/* Modal de login administrativo */}
+      {showAdminModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={closeAdminModal}
+        >
+          <div 
+            className="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Acesso Administrativo</h3>
+              <button 
+                onClick={closeAdminModal}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <input
+                type="password"
+                placeholder="Digite a senha"
+                value={adminPassword}
+                onChange={(e) => {
+                  setAdminPassword(e.target.value);
+                  setAdminError('');
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+              
+              {adminError && (
+                <p className="text-red-500 text-sm">{adminError}</p>
+              )}
+              
+              <div className="flex space-x-3">
+                <Button 
+                  onClick={handleAdminLogin}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  Entrar
+                </Button>
+                <Button 
+                  onClick={closeAdminModal}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Estilos customizados */}
       <style>{`
