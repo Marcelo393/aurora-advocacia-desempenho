@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   LogOut, 
   Users, 
@@ -37,7 +38,10 @@ import {
   ArrowDown,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageSquare,
+  Save,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +60,8 @@ const AdminDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
+  const [selectedEmployeeForComment, setSelectedEmployeeForComment] = useState('');
+  const [adminComment, setAdminComment] = useState('');
   
   const itemsPerPage = 10;
   
@@ -570,6 +576,7 @@ const AdminDashboard = () => {
     return insights;
   };
 
+
   if (!dashboardData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
@@ -587,6 +594,79 @@ const AdminDashboard = () => {
   const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedEmployees = filteredEmployees.slice(startIndex, startIndex + itemsPerPage);
+
+  // Funções para análise individual de funcionários
+  const selectedEmployeeData = selectedEmployeeForComment ? 
+    filteredEmployees.find((emp: any, index: number) => `${emp.name}-${index}` === selectedEmployeeForComment) : null;
+
+  const getEmployeeStrengths = (employee: any) => {
+    if (!employee?.skills) return [];
+    return Object.entries(employee.skills)
+      .map(([skill, rating]) => ({ skill, rating: rating as number }))
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 2);
+  };
+
+  const getEmployeeWeaknesses = (employee: any) => {
+    if (!employee?.skills) return [];
+    return Object.entries(employee.skills)
+      .map(([skill, rating]) => ({ skill, rating: rating as number }))
+      .sort((a, b) => a.rating - b.rating)
+      .slice(0, 2);
+  };
+
+  const getEmployeeRecommendations = (employee: any) => {
+    if (!employee) return [];
+    const weaknesses = getEmployeeWeaknesses(employee);
+    const recommendations = [];
+    
+    if (employee.overallRating >= 4) {
+      recommendations.push("Manter alto desempenho e considerar para liderança");
+      recommendations.push("Continuar desenvolvimento profissional");
+    } else if (employee.overallRating >= 3) {
+      recommendations.push("Foco em desenvolvimento específico");
+      if (weaknesses.length > 0) {
+        recommendations.push(`Treinamento em ${weaknesses[0].skill.toLowerCase()}`);
+      }
+    } else {
+      recommendations.push("Plano de melhoria individual necessário");
+      recommendations.push("Acompanhamento semanal recomendado");
+      if (weaknesses.length > 0) {
+        recommendations.push(`Priorizar melhoria em ${weaknesses[0].skill.toLowerCase()}`);
+      }
+    }
+    
+    return recommendations;
+  };
+
+  const saveAdminComment = () => {
+    if (!selectedEmployeeForComment || !adminComment.trim()) {
+      toast({
+        title: "Erro",
+        description: "Selecione um funcionário e digite um comentário.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const comments = JSON.parse(localStorage.getItem('adminComments') || '{}');
+    comments[selectedEmployeeForComment] = {
+      comment: adminComment.trim(),
+      date: new Date().toISOString(),
+      author: 'Admin'
+    };
+    localStorage.setItem('adminComments', JSON.stringify(comments));
+    
+    toast({
+      title: "Sucesso",
+      description: "Comentário salvo com sucesso!"
+    });
+
+    setAdminComment('');
+  };
+
+  const existingComment = selectedEmployeeForComment ? 
+    JSON.parse(localStorage.getItem('adminComments') || '{}')[selectedEmployeeForComment] : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100">
@@ -1173,51 +1253,178 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Exportações */}
+        {/* Comentários Individuais */}
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Download className="h-5 w-5 text-blue-600" />
-              <span>Exportações</span>
+              <MessageSquare className="h-5 w-5 text-blue-600" />
+              <span>💬 Comentários e Análises Individuais</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button 
-                onClick={() => exportReport('pdf')}
-                variant="outline"
-                className="flex flex-col space-y-2 h-20 hover:bg-red-50"
-              >
-                <FileText className="h-6 w-6 text-red-600" />
-                <span className="text-xs">Relatório PDF</span>
-              </Button>
-              
-              <Button 
-                onClick={() => exportReport('excel')}
-                variant="outline"
-                className="flex flex-col space-y-2 h-20 hover:bg-green-50"
-              >
-                <FileSpreadsheet className="h-6 w-6 text-green-600" />
-                <span className="text-xs">Planilha Excel</span>
-              </Button>
-              
-              <Button 
-                onClick={() => exportReport('png')}
-                variant="outline"
-                className="flex flex-col space-y-2 h-20 hover:bg-blue-50"
-              >
-                <Image className="h-6 w-6 text-blue-600" />
-                <span className="text-xs">Gráficos PNG</span>
-              </Button>
-              
-              <Button 
-                onClick={() => exportReport('json')}
-                variant="outline"
-                className="flex flex-col space-y-2 h-20 hover:bg-purple-50"
-              >
-                <Database className="h-6 w-6 text-purple-600" />
-                <span className="text-xs">Backup JSON</span>
-              </Button>
+            <div className="space-y-6">
+              {/* Dropdown para selecionar funcionário */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Selecionar Funcionário:
+                </label>
+                <Select 
+                  value={selectedEmployeeForComment} 
+                  onValueChange={setSelectedEmployeeForComment}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Escolha um funcionário para análise..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredEmployees.map((employee: any, index: number) => (
+                      <SelectItem key={index} value={`${employee.name}-${index}`}>
+                        {employee.name} - {employee.sector}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Perfil do funcionário selecionado */}
+              {selectedEmployeeData && (
+                <div className="space-y-4">
+                  {/* Card com perfil */}
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                    <CardContent className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="text-center">
+                          <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                          <p className="text-sm text-blue-700 font-medium">Nome</p>
+                          <p className="text-lg font-bold text-blue-900">{selectedEmployeeData.name}</p>
+                        </div>
+                        <div className="text-center">
+                          <Award className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                          <p className="text-sm text-blue-700 font-medium">Setor</p>
+                          <p className="text-lg font-bold text-blue-900">{selectedEmployeeData.sector}</p>
+                        </div>
+                        <div className="text-center">
+                          <Calendar className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                          <p className="text-sm text-blue-700 font-medium">Data Avaliação</p>
+                          <p className="text-lg font-bold text-blue-900">
+                            {new Date(selectedEmployeeData.date).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <Star className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                          <p className="text-sm text-blue-700 font-medium">Nota Geral</p>
+                          <p className="text-lg font-bold text-blue-900">{selectedEmployeeData.overallRating}/5 ⭐</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Análise detalhada */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {/* Pontos Fortes */}
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                      <CardContent className="p-4">
+                        <h3 className="flex items-center text-green-800 font-bold mb-3">
+                          🎯 Pontos Fortes
+                        </h3>
+                        <div className="space-y-2">
+                          {getEmployeeStrengths(selectedEmployeeData).map((strength: any, index: number) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span className="text-sm text-green-700">{strength.skill}</span>
+                              <span className="text-sm font-bold text-green-800">({strength.rating}/5)</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Áreas de Melhoria */}
+                    <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+                      <CardContent className="p-4">
+                        <h3 className="flex items-center text-yellow-800 font-bold mb-3">
+                          ⚠️ Áreas de Melhoria
+                        </h3>
+                        <div className="space-y-2">
+                          {getEmployeeWeaknesses(selectedEmployeeData).map((weakness: any, index: number) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span className="text-sm text-yellow-700">{weakness.skill}</span>
+                              <span className="text-sm font-bold text-yellow-800">({weakness.rating}/5)</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Recomendações */}
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                      <CardContent className="p-4">
+                        <h3 className="flex items-center text-blue-800 font-bold mb-3">
+                          💡 Recomendações
+                        </h3>
+                        <div className="space-y-2">
+                          {getEmployeeRecommendations(selectedEmployeeData).map((recommendation: string, index: number) => (
+                            <p key={index} className="text-sm text-blue-700">
+                              • {recommendation}
+                            </p>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Comentário personalizado */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">📝 Comentário Personalizado do Administrador</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <Textarea
+                          placeholder="Escreva aqui suas observações específicas sobre este funcionário..."
+                          value={adminComment}
+                          onChange={(e) => setAdminComment(e.target.value)}
+                          className="min-h-[120px] resize-none"
+                        />
+                        <div className="flex space-x-2">
+                          <Button 
+                            onClick={saveAdminComment}
+                            className="flex items-center space-x-2"
+                          >
+                            <Save className="h-4 w-4" />
+                            <span>Salvar Comentário</span>
+                          </Button>
+                          <Button 
+                            onClick={() => setAdminComment('')}
+                            variant="outline"
+                            className="flex items-center space-x-2"
+                          >
+                            <X className="h-4 w-4" />
+                            <span>Limpar</span>
+                          </Button>
+                        </div>
+                        
+                        {/* Mostrar comentário existente */}
+                        {existingComment && (
+                          <Card className="bg-slate-50">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-slate-600 mb-1">
+                                    Comentário salvo em {new Date(existingComment.date).toLocaleDateString('pt-BR')}
+                                  </p>
+                                  <p className="text-sm text-slate-800">{existingComment.comment}</p>
+                                </div>
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                  {existingComment.author}
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
