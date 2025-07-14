@@ -204,7 +204,6 @@ const Index = () => {
             </div>
           </div>
           
-          {/* Enhanced Progress Bar - apenas para o formulário */}
           {currentScreen > 1 && currentScreen < 6 && (
             <div className="space-y-3">
               <div className="flex justify-between text-sm text-slate-300">
@@ -212,7 +211,6 @@ const Index = () => {
                 <span>{Math.round(formProgress)}% completo</span>
               </div>
               
-              {/* Segmented Progress Bar */}
               <div className="flex space-x-1 h-2">
                 {[2, 3, 4, 5].map((pageIndex) => (
                   <div
@@ -230,7 +228,6 @@ const Index = () => {
             </div>
           )}
           
-          {/* Page Navigation - apenas para o formulário */}
           {currentScreen > 1 && currentScreen < 6 && (
             <div className="flex justify-between mt-6">
               {screens.slice(1, 5).map((screen, index) => {
@@ -282,7 +279,6 @@ const Index = () => {
         </Card>
       </div>
 
-      {/* Custom Styles */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         

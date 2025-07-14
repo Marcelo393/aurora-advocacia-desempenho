@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronRight, ChevronLeft, User, Star, Target, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -26,6 +26,15 @@ const DataSkillsPage: React.FC<DataSkillsPageProps> = ({
   canGoBack 
 }) => {
   const [errors, setErrors] = useState<string[]>([]);
+
+  const setores = [
+    "Previdenciário - Judicial",
+    "Previdenciário - Administrativo", 
+    "Previdenciário - Auxílio",
+    "Tributário",
+    "Securitário",
+    "Controladoria"
+  ];
 
   const pressaoOptions = [
     "Travar e não sair do lugar",
@@ -82,12 +91,10 @@ const DataSkillsPage: React.FC<DataSkillsPageProps> = ({
       }
     });
 
-    // Validar pressão - pelo menos uma opção deve ser selecionada
     if (!formData.pressaoOpcoes || formData.pressaoOpcoes.length === 0) {
       newErrors.push('pressaoOpcoes');
     }
 
-    // Validar tabelas
     conductItems.forEach(item => {
       if (!formData[item.key]) {
         newErrors.push(item.key);
@@ -166,15 +173,23 @@ const DataSkillsPage: React.FC<DataSkillsPageProps> = ({
           </div>
           <div>
             <Label htmlFor="setor" className="text-slate-700 font-medium">
-              Qual seu setor? <span className="text-red-500">*</span>
+              Qual seu setor/departamento? <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="setor"
+            <Select
               value={formData.setor || ''}
-              onChange={(e) => handleInputChange('setor', e.target.value)}
-              className={`mt-1 ${errors.includes('setor') ? 'border-red-500' : ''}`}
-              placeholder="Digite seu setor de trabalho"
-            />
+              onValueChange={(value) => handleInputChange('setor', value)}
+            >
+              <SelectTrigger className={`mt-1 ${errors.includes('setor') ? 'border-red-500' : ''}`}>
+                <SelectValue placeholder="Selecione seu setor/departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {setores.map((setor) => (
+                  <SelectItem key={setor} value={setor}>
+                    {setor}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
