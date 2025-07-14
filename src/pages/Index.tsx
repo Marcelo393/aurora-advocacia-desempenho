@@ -16,6 +16,7 @@ const Index = () => {
   const [currentScreen, setCurrentScreen] = useState(0); // 0 = Welcome, 1 = Presentation, 2-5 = Form pages, 6 = Confirmation
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     // Dados básicos
     nome: '',
@@ -98,6 +99,9 @@ const Index = () => {
       await soundService.playProgressSound();
     }
     
+    // Set the start time when form begins
+    setStartTime(Date.now());
+    
     setIsTransitioning(true);
     setTimeout(() => {
       setCurrentScreen(1);
@@ -160,7 +164,7 @@ const Index = () => {
 
   // Confirmation screen
   if (currentScreen >= screens.length) {
-    return <ConfirmationPage formData={formData} onGoHome={goHome} />;
+    return <ConfirmationPage formData={formData} onGoHome={goHome} startTime={startTime} />;
   }
 
   const CurrentScreenComponent = screens[currentScreen].component;

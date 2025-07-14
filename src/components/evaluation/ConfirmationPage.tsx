@@ -9,15 +9,33 @@ import { soundService } from '@/services/soundService';
 interface ConfirmationPageProps {
   formData: FormDataToSend;
   onGoHome: () => void;
+  startTime?: number | null;
 }
 
-const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome }) => {
+const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome, startTime }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [completionTime] = useState(new Date());
   const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
+    // Save evaluation data with timing to localStorage
+    const endTime = Date.now();
+    const responseTimeMinutes = startTime ? Math.round((endTime - startTime) / 60000) : null;
+    
+    const evaluationData = {
+      ...formData,
+      completedAt: new Date().toISOString(),
+      startTime: startTime,
+      endTime: endTime,
+      responseTimeMinutes: responseTimeMinutes
+    };
+    
+    // Save to localStorage for admin dashboard
+    const existingEvaluations = JSON.parse(localStorage.getItem('evaluations') || '[]');
+    existingEvaluations.push(evaluationData);
+    localStorage.setItem('evaluations', JSON.stringify(existingEvaluations));
+    
     // Triggering celebration animation and sound
     const timer = setTimeout(() => {
       setShowCelebration(true);
@@ -29,7 +47,7 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome 
     }, 500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [formData, startTime]);
 
   const handleDownloadPDF = async () => {
     setIsGeneratingPDF(true);
