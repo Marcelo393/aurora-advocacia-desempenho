@@ -121,6 +121,17 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
             </Button>
           </div>
 
+          {/* Botão de administrador */}
+          <div className="pt-5">
+            <button
+              onClick={() => setShowAdminModal(true)}
+              className="text-sm text-slate-400 bg-slate-100/20 backdrop-blur-sm px-4 py-2 rounded-lg hover:bg-slate-100/30 hover:text-slate-300 transition-all duration-300 border border-slate-300/30 hover:border-slate-300/50 cursor-pointer flex items-center space-x-2"
+            >
+              <span>🔒</span>
+              <span>Área do Administrador</span>
+            </button>
+          </div>
+
           {/* Informações adicionais */}
           <div className="pt-8 text-slate-400 text-sm space-y-2">
             <p>📋 4 seções principais • ⏱️ Tempo estimado: 10-15 minutos</p>
@@ -129,13 +140,6 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
         </div>
       </div>
 
-      {/* Botão de administrador discreto */}
-      <button
-        onClick={() => setShowAdminModal(true)}
-        className="fixed bottom-5 left-5 text-xs text-slate-500 bg-slate-100 bg-opacity-80 px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors backdrop-blur-sm border border-slate-300/50"
-      >
-        Área do Administrador
-      </button>
 
       {/* Modal de login administrativo */}
       {showAdminModal && (
