@@ -73,6 +73,11 @@ class SoundService {
     await this.playTone(600, 0.2, 'sine', 0.12);
   }
 
+  async playTransitionSound() {
+    // Som de transição suave
+    await this.playTone(500, 0.15, 'sine', 0.1);
+  }
+
   setSoundEnabled(enabled: boolean) {
     this.soundEnabled = enabled;
   }
@@ -83,3 +88,9 @@ class SoundService {
 }
 
 export const soundService = new SoundService();
+
+// Export individual functions for easier importing
+export const playSuccess = () => soundService.playSuccessSound();
+export const playTransition = () => soundService.playTransitionSound();
+export const playClick = () => soundService.playClickSound();
+export const playProgress = () => soundService.playProgressSound();
