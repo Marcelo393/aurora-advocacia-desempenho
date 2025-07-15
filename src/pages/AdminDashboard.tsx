@@ -348,19 +348,62 @@ const AdminDashboard = () => {
   const calculateSkillsAnalysis = (evaluations: any[]) => {
     if (evaluations.length === 0) return getEmptyData().skillsAnalysis;
     
-    // Coletar todas as habilidades únicas dos dados reais
-    const allSkills = new Set<string>();
-    evaluations.forEach(evaluation => {
-      if (evaluation.skills) {
-        Object.keys(evaluation.skills).forEach(skill => allSkills.add(skill));
-      }
-    });
+    // Definir as habilidades do formulário real
+    const realSkills = [
+      { key: 'lawNet', label: 'Sistema Law Net' },
+      { key: 'linguagemJuridica', label: 'Linguagem técnica jurídica' },
+      { key: 'conhecimentoLegislativo', label: 'Conhecimento legislativo' },
+      { key: 'sistemasJudiciarios', label: 'Sistemas judiciários' },
+      { key: 'posturaCliente', label: 'Postura profissional para atendimento' },
+      { key: 'comunicacaoCliente', label: 'Comunicação para atendimento' },
+      { key: 'jurisprudencia', label: 'Conhecimento jurisprudência' },
+      { key: 'pontualidade', label: 'Pontualidade' },
+      { key: 'vestimenta', label: 'Vestimenta' }
+    ];
     
-    const skillAverages = Array.from(allSkills).map(skill => {
-      const ratings = evaluations.map(evaluation => evaluation.skills?.[skill])
-        .filter(rating => typeof rating === 'number' && rating > 0);
+    const skillAverages = realSkills.map(skill => {
+      const ratings = evaluations.map(evaluation => {
+        // Buscar nas diferentes estruturas de dados possíveis
+        const allFormData = evaluation.allFormData || evaluation;
+        return allFormData[skill.key];
+      }).filter(rating => {
+        // Converter respostas para números
+        const convertRating = (value: any): number => {
+          if (typeof value === 'number') return value;
+          if (typeof value === 'string') {
+            const mapping: Record<string, number> = {
+              'excelente': 5,
+              'satisfatorio': 4,
+              'neutro': 3,
+              'insatisfatorio': 2,
+              'nao_utilizo': 0
+            };
+            return mapping[value] || 0;
+          }
+          return 0;
+        };
+        const numRating = convertRating(rating);
+        return numRating > 0; // Excluir "não utilizo" ou inválidos
+      }).map(rating => {
+        const convertRating = (value: any): number => {
+          if (typeof value === 'number') return value;
+          if (typeof value === 'string') {
+            const mapping: Record<string, number> = {
+              'excelente': 5,
+              'satisfatorio': 4,
+              'neutro': 3,
+              'insatisfatorio': 2,
+              'nao_utilizo': 0
+            };
+            return mapping[value] || 0;
+          }
+          return 0;
+        };
+        return convertRating(rating);
+      });
+      
       const average = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
-      return { skill, average: parseFloat(average.toFixed(1)) };
+      return { skill: skill.label, average: parseFloat(average.toFixed(1)) };
     }).filter(item => item.average > 0);
     
     // Ordenar por média para identificar pontos fortes e fracos
@@ -539,24 +582,54 @@ const AdminDashboard = () => {
       };
     }
 
-    // Calcular dados das habilidades baseado nos funcionários filtrados
-    const skillKeys = ['comunicacao', 'trabalhoEquipe', 'proatividade', 'pontualidade', 'conhecimento', 'gestao', 'postura', 'organizacao'];
+    // Calcular dados das habilidades baseado nos funcionários filtrados usando habilidades reais
+    const realSkills = [
+      { key: 'lawNet', label: 'Sistema Law Net' },
+      { key: 'linguagemJuridica', label: 'Linguagem técnica jurídica' },
+      { key: 'conhecimentoLegislativo', label: 'Conhecimento legislativo' },
+      { key: 'sistemasJudiciarios', label: 'Sistemas judiciários' },
+      { key: 'posturaCliente', label: 'Postura profissional para atendimento' },
+      { key: 'comunicacaoCliente', label: 'Comunicação para atendimento' },
+      { key: 'jurisprudencia', label: 'Conhecimento jurisprudência' },
+      { key: 'pontualidade', label: 'Pontualidade' },
+      { key: 'vestimenta', label: 'Vestimenta' }
+    ];
+    
     const skillTotals: Record<string, number[]> = {};
     
     filteredForCharts.forEach(emp => {
-      skillKeys.forEach(skill => {
-        if (!skillTotals[skill]) skillTotals[skill] = [];
-        const skillValue = emp.skills?.[skill];
+      realSkills.forEach(skill => {
+        if (!skillTotals[skill.key]) skillTotals[skill.key] = [];
         
-        // Já vem como número processado do localStorage
-        if (typeof skillValue === 'number' && skillValue > 0) {
-          skillTotals[skill].push(skillValue);
+        // Buscar nas diferentes estruturas de dados possíveis
+        const allFormData = emp.evaluation?.allFormData || emp.evaluation || emp;
+        const skillValue = allFormData[skill.key];
+        
+        // Converter respostas para números
+        const convertRating = (value: any): number => {
+          if (typeof value === 'number') return value;
+          if (typeof value === 'string') {
+            const mapping: Record<string, number> = {
+              'excelente': 5,
+              'satisfatorio': 4,
+              'neutro': 3,
+              'insatisfatorio': 2,
+              'nao_utilizo': 0
+            };
+            return mapping[value] || 0;
+          }
+          return 0;
+        };
+        
+        const numRating = convertRating(skillValue);
+        if (numRating > 0) {
+          skillTotals[skill.key].push(numRating);
         }
       });
     });
     
-    const skillsChartData = skillKeys.map(skill => {
-      const values = skillTotals[skill] || [];
+    const skillsChartData = realSkills.map(skill => {
+      const values = skillTotals[skill.key] || [];
       if (values.length === 0) return null;
       
       const average = values.reduce((a, b) => a + b, 0) / values.length;
@@ -580,19 +653,8 @@ const AdminDashboard = () => {
         classification = 'Precisa Atenção';
       }
       
-      const skillNames: Record<string, string> = {
-        comunicacao: 'Comunicação',
-        trabalhoEquipe: 'Trabalho em Equipe',
-        proatividade: 'Proatividade',
-        pontualidade: 'Pontualidade',
-        conhecimento: 'Conhecimento Técnico',
-        gestao: 'Gestão',
-        postura: 'Postura Profissional',
-        organizacao: 'Organização'
-      };
-      
       return {
-        skill: skillNames[skill] || skill,
+        skill: skill.label,
         average: avgRounded,
         color,
         classification
