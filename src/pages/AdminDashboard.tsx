@@ -222,17 +222,17 @@ const AdminDashboard = () => {
           setDashboardData(processRealData(evaluations));
         } else {
           setHasRealData(false);
-          setDashboardData(generateMockData());
+          setDashboardData(getEmptyData());
         }
       } catch (error) {
         console.error('Erro ao processar dados:', error);
         setHasRealData(false);
-        setDashboardData(generateMockData());
+        setDashboardData(getEmptyData());
       }
     } else {
-      // Usar dados mock para demonstração
+      // Sem dados - mostrar estado vazio
       setHasRealData(false);
-      setDashboardData(generateMockData());
+      setDashboardData(getEmptyData());
     }
   };
 
@@ -257,50 +257,29 @@ const AdminDashboard = () => {
     };
   };
 
-  const generateMockData = () => {
+  const getEmptyData = () => {
     return {
       overview: {
-        totalEvaluations: 47,
-        averageTime: '12 min',
-        overallAverage: 4.2,
-        lastResponse: '2 horas atrás'
+        totalEvaluations: 0,
+        averageTime: '0 min',
+        overallAverage: 0,
+        lastResponse: 'Nenhuma avaliação'
       },
       skillsAnalysis: {
-        averages: skills.map(skill => ({
-          skill,
-          average: (3.5 + Math.random() * 1.5).toFixed(1)
-        })),
-        topStrengths: [
-          'Conhecimento técnico',
-          'Comunicação',
-          'Relacionamento interpessoal'
-        ],
-        improvements: [
-          'Gestão do tempo',
-          'Liderança',
-          'Adaptabilidade'
-        ]
+        averages: [],
+        topStrengths: [],
+        improvements: []
       },
-      sectorsAnalysis: sectors.map(sector => ({
-        sector,
-        employees: Math.floor(Math.random() * 12) + 3,
-        average: (3.5 + Math.random() * 1.5).toFixed(1)
-      })),
+      sectorsAnalysis: [],
       climateData: {
-        generalSatisfaction: 4.1,
-        distribution: [
-          { rating: 1, count: 2 },
-          { rating: 2, count: 5 },
-          { rating: 3, count: 12 },
-          { rating: 4, count: 18 },
-          { rating: 5, count: 10 }
-        ]
+        generalSatisfaction: 0,
+        distribution: []
       },
       insights: {
-        bestSector: 'Previdenciário - Judicial',
-        needsAttention: 'Tributário',
-        criticalSkill: 'Gestão do tempo',
-        recommendation: 'Treinamento em produtividade'
+        bestSector: 'Nenhum',
+        needsAttention: 'Nenhum',
+        criticalSkill: 'Nenhum',
+        recommendation: 'Aguardando dados'
       }
     };
   };
@@ -366,7 +345,7 @@ const AdminDashboard = () => {
   };
 
   const calculateSkillsAnalysis = (evaluations: any[]) => {
-    if (evaluations.length === 0) return generateMockData().skillsAnalysis;
+    if (evaluations.length === 0) return getEmptyData().skillsAnalysis;
     
     const skillAverages = skills.map(skill => {
       const ratings = evaluations.map(evaluation => evaluation.skills?.[skill]).filter(Boolean);
@@ -385,7 +364,7 @@ const AdminDashboard = () => {
   };
 
   const calculateSectorsAnalysis = (evaluations: any[]) => {
-    if (evaluations.length === 0) return generateMockData().sectorsAnalysis;
+    if (evaluations.length === 0) return getEmptyData().sectorsAnalysis;
     
     const sectorData = sectors.map(sector => {
       const sectorEvaluations = evaluations.filter(evaluation => evaluation.sector === sector);
@@ -416,12 +395,12 @@ const AdminDashboard = () => {
   };
 
   const calculateClimateData = (evaluations: any[]) => {
-    if (evaluations.length === 0) return generateMockData().climateData;
+    if (evaluations.length === 0) return getEmptyData().climateData;
     
     const climateRatings = evaluations.map(evaluation => evaluation.climateRating).filter(Boolean);
     
     if (climateRatings.length === 0) {
-      return generateMockData().climateData;
+      return getEmptyData().climateData;
     }
     
     const generalSatisfaction = climateRatings.reduce((sum, rating) => sum + rating, 0) / climateRatings.length;
@@ -439,7 +418,7 @@ const AdminDashboard = () => {
   };
 
   const generateInsights = (evaluations: any[]) => {
-    if (evaluations.length === 0) return generateMockData().insights;
+    if (evaluations.length === 0) return getEmptyData().insights;
     
     const sectorsAnalysis = calculateSectorsAnalysis(evaluations);
     const skillsAnalysis = calculateSkillsAnalysis(evaluations);
@@ -515,66 +494,57 @@ const AdminDashboard = () => {
   const handleClearData = () => {
     localStorage.removeItem('evaluationResponses');
     setHasRealData(false);
-    setDashboardData(generateMockData());
+    setDashboardData(getEmptyData());
     toast({
       title: "Dados limpos",
       description: "Todos os dados de avaliação foram removidos do sistema.",
     });
   };
 
-  const generateTestData = () => {
-    const testData = [];
-    const names = ['João Silva', 'Maria Santos', 'Pedro Oliveira', 'Ana Costa', 'Carlos Souza'];
-    
-    for (let i = 0; i < 5; i++) {
-      const evaluation = {
-        id: `test-${i}`,
-        name: names[i],
-        sector: sectors[i % sectors.length],
-        timestamp: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
-        duration: Math.floor(Math.random() * 10) + 8,
-        skills: {},
-        climateRating: Math.floor(Math.random() * 5) + 1
-      };
-      
-      skills.forEach(skill => {
-        evaluation.skills[skill] = Math.floor(Math.random() * 5) + 1;
-      });
-      
-      testData.push(evaluation);
-    }
-    
-    localStorage.setItem('evaluationResponses', JSON.stringify(testData));
-    setHasRealData(true);
-    setDashboardData(processRealData(testData));
-    toast({
-      title: "Dados de teste gerados",
-      description: "5 avaliações de teste foram criadas para demonstração.",
-    });
-  };
 
-  // Preparar dados para gráficos - CORRIGIDO para usar filtro
+  // Preparar dados para gráficos - usando APENAS dados reais
   const prepareChartData = () => {
     // Filtrar funcionários baseado no setor selecionado
     const employees = getEmployeeData();
-    const allEmployees = employees; // Adicionar variável allEmployees
+    
+    if (employees.length === 0) {
+      return { 
+        skillsChartData: [], 
+        sectorsChartData: [] 
+      };
+    }
+    
     const filteredForCharts = selectedSector === 'all' 
       ? employees 
       : employees.filter(emp => emp.sector === selectedSector);
 
+    if (filteredForCharts.length === 0) {
+      return { 
+        skillsChartData: [], 
+        sectorsChartData: [] 
+      };
+    }
+
     // Calcular dados das habilidades baseado nos funcionários filtrados
-    const skills = ['comunicacao', 'trabalhoEquipe', 'proatividade', 'pontualidade', 'conhecimento', 'gestao', 'postura', 'organizacao', 'clima'];
+    const skillKeys = ['comunicacao', 'trabalhoEquipe', 'proatividade', 'pontualidade', 'conhecimento', 'gestao', 'postura', 'organizacao'];
     const skillTotals: Record<string, number[]> = {};
     
     filteredForCharts.forEach(emp => {
-      skills.forEach(skill => {
+      skillKeys.forEach(skill => {
         if (!skillTotals[skill]) skillTotals[skill] = [];
-        skillTotals[skill].push(emp.skills?.[skill] || 3);
+        const skillValue = emp.skills?.[skill];
+        
+        // Já vem como número processado do localStorage
+        if (typeof skillValue === 'number' && skillValue > 0) {
+          skillTotals[skill].push(skillValue);
+        }
       });
     });
     
-    const skillsChartData = skills.map(skill => {
-      const values = skillTotals[skill] || [3];
+    const skillsChartData = skillKeys.map(skill => {
+      const values = skillTotals[skill] || [];
+      if (values.length === 0) return null;
+      
       const average = values.reduce((a, b) => a + b, 0) / values.length;
       const avgRounded = Number(average.toFixed(2));
       
@@ -596,13 +566,24 @@ const AdminDashboard = () => {
         classification = 'Precisa Atenção';
       }
       
+      const skillNames: Record<string, string> = {
+        comunicacao: 'Comunicação',
+        trabalhoEquipe: 'Trabalho em Equipe',
+        proatividade: 'Proatividade',
+        pontualidade: 'Pontualidade',
+        conhecimento: 'Conhecimento Técnico',
+        gestao: 'Gestão',
+        postura: 'Postura Profissional',
+        organizacao: 'Organização'
+      };
+      
       return {
-        skill: skill.charAt(0).toUpperCase() + skill.slice(1),
+        skill: skillNames[skill] || skill,
         average: avgRounded,
         color,
         classification
       };
-    });
+    }).filter(Boolean);
 
     // Calcular dados dos setores baseado nos funcionários filtrados
     const sectorCounts: Record<string, number> = {};
@@ -613,7 +594,6 @@ const AdminDashboard = () => {
     const sectorsChartData = Object.entries(sectorCounts).map(([sector, count], index) => ({
       sector,
       employees: count,
-      average: 4.2, // Valor exemplo
       fill: CHART_COLORS[index % CHART_COLORS.length]
     }));
 
@@ -1008,17 +988,6 @@ const AdminDashboard = () => {
                 {hasRealData ? 'Dados Reais' : 'Dados de Demonstração'}
               </span>
             </div>
-            {!hasRealData && (
-              <Button 
-                onClick={generateTestData}
-                size="sm"
-                variant="outline"
-                className="text-blue-600 hover:bg-blue-50 border-blue-200"
-              >
-                <Database className="h-4 w-4 mr-2" />
-                Gerar Dados de Teste
-              </Button>
-            )}
           </div>
           <div className="text-sm text-slate-500">
             Total de respostas: {dashboardData.overview.totalEvaluations}
@@ -1119,29 +1088,39 @@ const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={skillsChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="skill" angle={-45} textAnchor="end" height={100} fontSize={12} />
-                  <YAxis domain={[0, 5]} />
-                  <Tooltip 
-                    formatter={(value: any, name: any, props: any) => [
-                      `${value}/5 - ${props.payload.classification}`,
-                      'Nota'
-                    ]}
-                    labelStyle={{ color: '#1e293b' }}
-                    contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}
-                  />
-                  <Bar 
-                    dataKey="average" 
-                    radius={[4, 4, 0, 0]}
-                  >
-                    {skillsChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {skillsChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={skillsChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="skill" angle={-45} textAnchor="end" height={100} fontSize={12} />
+                    <YAxis domain={[0, 5]} />
+                    <Tooltip 
+                      formatter={(value: any, name: any, props: any) => [
+                        `${value}/5 - ${props.payload.classification}`,
+                        'Nota'
+                      ]}
+                      labelStyle={{ color: '#1e293b' }}
+                      contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                    />
+                    <Bar 
+                      dataKey="average" 
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {skillsChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-300 flex items-center justify-center text-slate-500 bg-slate-50 rounded-lg">
+                  <div className="text-center">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+                    <p className="text-lg font-medium">Nenhuma avaliação encontrada</p>
+                    <p className="text-sm">Aguardando dados de habilidades</p>
+                  </div>
+                </div>
+              )}
               
               {/* Legenda de Cores */}
               <div className="mt-4 p-4 bg-slate-50 rounded-lg">
@@ -1181,25 +1160,35 @@ const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <RechartsPieChart>
-                  <Pie
-                    data={sectorsChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ sector, employees }) => `${sector}: ${employees}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="employees"
-                  >
-                    {sectorsChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPieChart>
-              </ResponsiveContainer>
+              {sectorsChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={sectorsChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ sector, employees }) => `${sector}: ${employees}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="employees"
+                    >
+                      {sectorsChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-300 flex items-center justify-center text-slate-500 bg-slate-50 rounded-lg">
+                  <div className="text-center">
+                    <PieChart className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+                    <p className="text-lg font-medium">Nenhum setor avaliado</p>
+                    <p className="text-sm">Aguardando dados por setor</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
