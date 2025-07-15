@@ -313,14 +313,15 @@ const AdminDashboard = () => {
     let totalCount = 0;
     
     evaluations.forEach(evaluation => {
-      // Somar todas as notas das habilidades
-      skills.forEach(skill => {
-        const rating = evaluation.skills?.[skill];
-        if (rating) {
-          totalSum += rating;
-          totalCount++;
-        }
-      });
+      // Usar Object.values para somar todas as habilidades
+      if (evaluation.skills) {
+        Object.values(evaluation.skills).forEach((rating: any) => {
+          if (typeof rating === 'number' && rating > 0) {
+            totalSum += rating;
+            totalCount++;
+          }
+        });
+      }
     });
     
     return totalCount > 0 ? parseFloat((totalSum / totalCount).toFixed(1)) : 0;
@@ -347,14 +348,23 @@ const AdminDashboard = () => {
   const calculateSkillsAnalysis = (evaluations: any[]) => {
     if (evaluations.length === 0) return getEmptyData().skillsAnalysis;
     
-    const skillAverages = skills.map(skill => {
-      const ratings = evaluations.map(evaluation => evaluation.skills?.[skill]).filter(Boolean);
-      const average = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
-      return { skill, average: average.toFixed(1) };
+    // Coletar todas as habilidades únicas dos dados reais
+    const allSkills = new Set<string>();
+    evaluations.forEach(evaluation => {
+      if (evaluation.skills) {
+        Object.keys(evaluation.skills).forEach(skill => allSkills.add(skill));
+      }
     });
     
+    const skillAverages = Array.from(allSkills).map(skill => {
+      const ratings = evaluations.map(evaluation => evaluation.skills?.[skill])
+        .filter(rating => typeof rating === 'number' && rating > 0);
+      const average = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
+      return { skill, average: parseFloat(average.toFixed(1)) };
+    }).filter(item => item.average > 0);
+    
     // Ordenar por média para identificar pontos fortes e fracos
-    const sortedSkills = skillAverages.sort((a, b) => parseFloat(b.average) - parseFloat(a.average));
+    const sortedSkills = skillAverages.sort((a, b) => b.average - a.average);
     
     return {
       averages: skillAverages,
@@ -378,13 +388,14 @@ const AdminDashboard = () => {
       let totalCount = 0;
       
       sectorEvaluations.forEach(evaluation => {
-        skills.forEach(skill => {
-          const rating = evaluation.skills?.[skill];
-          if (rating) {
-            totalSum += rating;
-            totalCount++;
-          }
-        });
+        if (evaluation.skills) {
+          Object.values(evaluation.skills).forEach((rating: any) => {
+            if (typeof rating === 'number' && rating > 0) {
+              totalSum += rating;
+              totalCount++;
+            }
+          });
+        }
       });
       
       const average = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : '0.0';
@@ -397,7 +408,10 @@ const AdminDashboard = () => {
   const calculateClimateData = (evaluations: any[]) => {
     if (evaluations.length === 0) return getEmptyData().climateData;
     
-    const climateRatings = evaluations.map(evaluation => evaluation.climateRating).filter(Boolean);
+    const climateRatings = evaluations.map(evaluation => {
+      const satisfacao = evaluation.climateData?.satisfacaoGeral;
+      return mapSatisfactionToNumber(satisfacao);
+    }).filter(rating => rating > 0);
     
     if (climateRatings.length === 0) {
       return getEmptyData().climateData;

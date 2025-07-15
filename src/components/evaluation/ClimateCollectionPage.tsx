@@ -138,6 +138,18 @@ const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({
       const endTime = Date.now();
       const responseTime = startTime ? Math.round((endTime - startTime) / 1000 / 60) : null; // tempo em minutos
       
+      // Função para converter respostas do formulário para números
+      const convertRating = (value: string): number => {
+        const mapping: Record<string, number> = {
+          'excelente': 5,
+          'satisfatorio': 4,
+          'neutro': 3,
+          'insatisfatorio': 2,
+          'nao_utilizo': 0
+        };
+        return mapping[value] || 3;
+      };
+
       const newResponse = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
@@ -146,15 +158,15 @@ const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({
         sector: formData.setor || 'Não informado',
         responseTimeMinutes: responseTime,
         skills: {
-          comunicacao: parseInt(formData.comunicacaoCliente) || parseInt(formData.linguagemJuridica) || 3,
-          trabalhoEquipe: parseInt(formData.trabalhoEquipe) || 3,
-          proatividade: parseInt(formData.proatividade) || 3,
-          pontualidade: parseInt(formData.pontualidade) || 3,
-          conhecimento: parseInt(formData.conhecimentoLegislativo) || 3,
-          gestao: parseInt(formData.importanciaTrabalho) || 3,
-          postura: parseInt(formData.posturaCliente) || parseInt(formData.posturaTrabalho) || 3,
-          organizacao: parseInt(formData.cuidadoPatrimonial) || 3,
-          clima: mapSatisfactionToRating(formData.satisfacaoGeral)
+          'Comunicação': convertRating(formData.comunicacaoCliente),
+          'Trabalho em equipe': convertRating(formData.trabalhoEquipe),
+          'Resolução de problemas': convertRating(formData.proatividade),
+          'Gestão do tempo': convertRating(formData.pontualidade),
+          'Adaptabilidade': convertRating(formData.situacoesNovas),
+          'Liderança': convertRating(formData.posturaAdvogados),
+          'Conhecimento técnico': convertRating(formData.conhecimentoLegislativo),
+          'Iniciativa': convertRating(formData.proatividade),
+          'Relacionamento interpessoal': convertRating(formData.posturaCliente)
         },
         climateData: {
           satisfacaoGeral: formData.satisfacaoGeral,
