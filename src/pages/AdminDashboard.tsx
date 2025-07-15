@@ -122,12 +122,12 @@ const AdminDashboard = () => {
     
     // Encontrar melhor e pior habilidade
     const skillEntries = Object.entries(skills).filter(([_, value]) => value);
-    const melhorHabilidade = skillEntries.reduce((best, current) => 
-      current[1] > best[1] ? current : best
-    );
-    const piorHabilidade = skillEntries.reduce((worst, current) => 
-      current[1] < worst[1] ? current : worst
-    );
+    const melhorHabilidade = skillEntries.length > 0 ? skillEntries.reduce((best, current) => 
+      current[1] > best[1] ? current : best, skillEntries[0]
+    ) : ['N/A', 0];
+    const piorHabilidade = skillEntries.length > 0 ? skillEntries.reduce((worst, current) => 
+      current[1] < worst[1] ? current : worst, skillEntries[0]
+    ) : ['N/A', 0];
     
     let comentario = "";
     
@@ -438,19 +438,19 @@ const AdminDashboard = () => {
     const skillsAnalysis = calculateSkillsAnalysis(evaluations);
     
     // Melhor setor
-    const bestSector = sectorsAnalysis.reduce((best, current) => 
-      parseFloat(current.average) > parseFloat(best.average) ? current : best
-    );
+    const bestSector = sectorsAnalysis.length > 0 ? sectorsAnalysis.reduce((best, current) => 
+      parseFloat(current.average) > parseFloat(best.average) ? current : best, sectorsAnalysis[0]
+    ) : { sector: 'Nenhum', average: '0.0' };
     
     // Setor que precisa atenção
-    const needsAttention = sectorsAnalysis.reduce((worst, current) => 
-      parseFloat(current.average) < parseFloat(worst.average) && current.employees > 0 ? current : worst
-    );
+    const needsAttention = sectorsAnalysis.length > 0 ? sectorsAnalysis.reduce((worst, current) => 
+      parseFloat(current.average) < parseFloat(worst.average) && current.employees > 0 ? current : worst, sectorsAnalysis[0]
+    ) : { sector: 'Nenhum', average: '0.0' };
     
     // Habilidade crítica (menor média)
-    const criticalSkill = skillsAnalysis.averages.reduce((worst, current) => 
-      parseFloat(current.average) < parseFloat(worst.average) ? current : worst
-    );
+    const criticalSkill = skillsAnalysis.averages.length > 0 ? skillsAnalysis.averages.reduce((worst, current) => 
+      parseFloat(current.average) < parseFloat(worst.average) ? current : worst, skillsAnalysis.averages[0]
+    ) : { skill: 'Nenhum', average: '0.0' };
     
     // Recomendação baseada na habilidade crítica
     const skillRecommendations: { [key: string]: string } = {
