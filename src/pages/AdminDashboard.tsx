@@ -637,12 +637,16 @@ const AdminDashboard = () => {
 
   // Preparar insights automáticos
   const generateAutomaticInsights = () => {
+    if (!dashboardData?.sectorsAnalysis || !dashboardData?.skillsAnalysis?.averages) {
+      return [];
+    }
+    
     const insights = [];
     
     // Melhor Performance
-    const bestSector = dashboardData.sectorsAnalysis.reduce((best: any, current: any) => 
-      parseFloat(current.average) > parseFloat(best.average) ? current : best
-    );
+    const bestSector = dashboardData.sectorsAnalysis?.length > 0 ? dashboardData.sectorsAnalysis.reduce((best: any, current: any) => 
+      parseFloat(current.average) > parseFloat(best.average) ? current : best, dashboardData.sectorsAnalysis[0]
+    ) : { sector: 'Nenhum', average: '0.0' };
     insights.push({
       icon: <Trophy className="h-5 w-5 text-yellow-600" />,
       title: "Melhor Performance",
@@ -651,9 +655,9 @@ const AdminDashboard = () => {
     });
 
     // Atenção Necessária
-    const criticalSkill = dashboardData.skillsAnalysis.averages.reduce((worst: any, current: any) => 
-      parseFloat(current.average) < parseFloat(worst.average) ? current : worst
-    );
+    const criticalSkill = dashboardData.skillsAnalysis?.averages?.length > 0 ? dashboardData.skillsAnalysis.averages.reduce((worst: any, current: any) => 
+      parseFloat(current.average) < parseFloat(worst.average) ? current : worst, dashboardData.skillsAnalysis.averages[0]
+    ) : { skill: 'Nenhum', average: '0.0' };
     insights.push({
       icon: <AlertCircle className="h-5 w-5 text-red-600" />,
       title: "Atenção Necessária",
@@ -861,6 +865,18 @@ const AdminDashboard = () => {
   const existingComment = selectedEmployeeForComment ? 
     JSON.parse(localStorage.getItem('adminComments') || '{}')[selectedEmployeeForComment] : null;
 
+
+  // Render loading state if data is not ready
+  if (!dashboardData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Carregando dados do dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100">
