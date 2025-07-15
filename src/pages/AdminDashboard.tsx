@@ -74,6 +74,7 @@ const AdminDashboard = () => {
     if (savedData) {
       try {
         const evaluations = JSON.parse(savedData);
+        console.log('📊 Dados carregados do localStorage:', evaluations);
         return evaluations.map((evaluation: any, index: number) => ({
           id: evaluation.id || `emp-${index}`,
           name: evaluation.name || `Funcionário ${index + 1}`,
@@ -81,8 +82,11 @@ const AdminDashboard = () => {
           date: evaluation.timestamp || evaluation.createdAt || new Date().toISOString(),
           overallRating: calculateIndividualOverallRating(evaluation.skills || {}),
           skills: evaluation.skills || {},
-          climateRating: evaluation.climateRating || 0,
-          evaluation: evaluation
+          climateRating: mapSatisfactionToNumber(evaluation.climateData?.satisfacaoGeral) || 3,
+          responseTime: evaluation.responseTimeMinutes || 0,
+          evaluation: evaluation,
+          // Comentário automático gerado
+          autoComment: generateAutoComment(evaluation)
         }));
       } catch (error) {
         console.error('Erro ao processar dados dos funcionários:', error);
@@ -90,6 +94,77 @@ const AdminDashboard = () => {
       }
     }
     return [];
+  };
+
+  // Mapear satisfação para número
+  const mapSatisfactionToNumber = (satisfaction: string): number => {
+    const mapping: Record<string, number> = {
+      'muito_insatisfeito': 1,
+      'insatisfeito': 2,
+      'neutro': 3,
+      'satisfeito': 4,
+      'muito_satisfeito': 5
+    };
+    return mapping[satisfaction] || 3;
+  };
+
+  // Gerar comentário automático inteligente
+  const generateAutoComment = (evaluation: any): string => {
+    if (!evaluation.skills) return "Dados insuficientes para análise.";
+    
+    const skills = evaluation.skills;
+    const ratings = Object.values(skills).filter(Boolean) as number[];
+    
+    if (ratings.length === 0) return "Avaliação não contém dados de habilidades.";
+    
+    const media = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+    const climateRating = mapSatisfactionToNumber(evaluation.climateData?.satisfacaoGeral) || 3;
+    
+    // Encontrar melhor e pior habilidade
+    const skillEntries = Object.entries(skills).filter(([_, value]) => value);
+    const melhorHabilidade = skillEntries.reduce((best, current) => 
+      current[1] > best[1] ? current : best
+    );
+    const piorHabilidade = skillEntries.reduce((worst, current) => 
+      current[1] < worst[1] ? current : worst
+    );
+    
+    let comentario = "";
+    
+    // Avaliação geral
+    if (media >= 4.5) comentario += "Desempenho EXCELENTE com nota geral superior. ";
+    else if (media >= 4.0) comentario += "Desempenho MUITO BOM demonstrando competência sólida. ";
+    else if (media >= 3.0) comentario += "Desempenho SATISFATÓRIO dentro das expectativas. ";
+    else comentario += "Desempenho PRECISA ATENÇÃO com oportunidades de melhoria significativas. ";
+    
+    // Ponto forte
+    const skillNames: Record<string, string> = {
+      comunicacao: 'Comunicação',
+      trabalhoEquipe: 'Trabalho em Equipe',
+      proatividade: 'Proatividade',
+      pontualidade: 'Pontualidade',
+      conhecimento: 'Conhecimento Técnico',
+      gestao: 'Gestão',
+      postura: 'Postura Profissional',
+      organizacao: 'Organização',
+      clima: 'Satisfação Organizacional'
+    };
+    
+    comentario += `Destaque em ${skillNames[melhorHabilidade[0]] || melhorHabilidade[0]} (${melhorHabilidade[1]}/5). `;
+    
+    // Área de melhoria
+    if (Number(piorHabilidade[1]) <= 3) {
+      comentario += `Desenvolver ${skillNames[piorHabilidade[0]] || piorHabilidade[0]} (${piorHabilidade[1]}/5). `;
+    }
+    
+    // Clima organizacional
+    if (climateRating <= 2) {
+      comentario += "Atenção ao nível de satisfação organizacional reportado.";
+    } else if (climateRating >= 4) {
+      comentario += "Demonstra alta satisfação com o ambiente de trabalho.";
+    }
+    
+    return comentario;
   };
   
   const calculateIndividualOverallRating = (skills: any) => {
@@ -231,11 +306,25 @@ const AdminDashboard = () => {
   };
 
   const calculateAverageTime = (evaluations: any[]) => {
-    // Implementar cálculo real baseado em timestamps
     if (evaluations.length === 0) return '0 min';
-    const totalTime = evaluations.reduce((sum, evaluation) => sum + (evaluation.duration || 10), 0);
+    const totalTime = evaluations.reduce((sum, evaluation) => sum + (evaluation.responseTimeMinutes || 10), 0);
     const average = Math.round(totalTime / evaluations.length);
     return `${average} min`;
+  };
+
+  // Calcular tempo médio por setor
+  const getAverageTimePerSector = () => {
+    const employees = getEmployeeData();
+    const sectorTimes = sectors.map(sector => {
+      const sectorEmployees = employees.filter(emp => emp.sector === sector);
+      if (sectorEmployees.length === 0) return { sector, time: '0min' };
+      
+      const totalTime = sectorEmployees.reduce((sum, emp) => sum + (emp.responseTime || 0), 0);
+      const avgTime = Math.round(totalTime / sectorEmployees.length);
+      return { sector, time: `${avgTime}min` };
+    }).filter(item => item.time !== '0min');
+    
+    return sectorTimes;
   };
 
   const calculateOverallAverage = (evaluations: any[]) => {
@@ -623,18 +712,52 @@ const AdminDashboard = () => {
 
   const getEmployeeStrengths = (employee: any) => {
     if (!employee?.skills) return [];
+    
+    const skillNames: Record<string, string> = {
+      comunicacao: 'Comunicação',
+      trabalhoEquipe: 'Trabalho em Equipe',
+      proatividade: 'Proatividade',
+      pontualidade: 'Pontualidade',
+      conhecimento: 'Conhecimento Técnico',
+      gestao: 'Gestão',
+      postura: 'Postura Profissional',
+      organizacao: 'Organização',
+      clima: 'Satisfação Organizacional'
+    };
+    
     return Object.entries(employee.skills)
-      .map(([skill, rating]) => ({ skill, rating: rating as number }))
+      .filter(([_, rating]) => Number(rating) >= 4)
+      .map(([skill, rating]) => ({
+        skill: skillNames[skill] || skill,
+        rating: Number(rating)
+      }))
       .sort((a, b) => b.rating - a.rating)
-      .slice(0, 2);
+      .slice(0, 3);
   };
 
   const getEmployeeWeaknesses = (employee: any) => {
     if (!employee?.skills) return [];
+    
+    const skillNames: Record<string, string> = {
+      comunicacao: 'Comunicação',
+      trabalhoEquipe: 'Trabalho em Equipe',
+      proatividade: 'Proatividade',
+      pontualidade: 'Pontualidade',
+      conhecimento: 'Conhecimento Técnico',
+      gestao: 'Gestão',
+      postura: 'Postura Profissional',
+      organizacao: 'Organização',
+      clima: 'Satisfação Organizacional'
+    };
+    
     return Object.entries(employee.skills)
-      .map(([skill, rating]) => ({ skill, rating: rating as number }))
+      .filter(([_, rating]) => Number(rating) <= 3)
+      .map(([skill, rating]) => ({
+        skill: skillNames[skill] || skill,
+        rating: Number(rating)
+      }))
       .sort((a, b) => a.rating - b.rating)
-      .slice(0, 2);
+      .slice(0, 3);
   };
 
   const getEmployeeRecommendations = (employee: any) => {
@@ -664,6 +787,12 @@ const AdminDashboard = () => {
   const generateAutomaticComment = (employee: any) => {
     if (!employee) return "Nenhum funcionário selecionado para análise.";
     
+    // Usar comentário automático gerado se disponível
+    if (employee.autoComment) {
+      return employee.autoComment;
+    }
+    
+    // Fallback para geração dinâmica
     const media = employee.overallRating;
     const melhor = getEmployeeStrengths(employee)[0];
     const pior = getEmployeeWeaknesses(employee)[0];
@@ -737,6 +866,7 @@ const AdminDashboard = () => {
 
   const existingComment = selectedEmployeeForComment ? 
     JSON.parse(localStorage.getItem('adminComments') || '{}')[selectedEmployeeForComment] : null;
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100">
@@ -897,8 +1027,8 @@ const AdminDashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto p-6 space-y-8">
-        {/* Cards Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Cards Resumo Executivo */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -954,6 +1084,25 @@ const AdminDashboard = () => {
                   <p className="text-purple-100 text-xs mt-1">Satisfação geral</p>
                 </div>
                 <Smile className="h-12 w-12 text-purple-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-cyan-500 to-cyan-600 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-cyan-100 text-sm font-medium">⏱️ Tempo Médio por Setor</p>
+                  <div className="space-y-1 mt-2">
+                    {getAverageTimePerSector().slice(0, 3).map((item, index) => (
+                      <div key={index} className="text-xs text-cyan-100">
+                        <span className="font-medium">{item.sector.split(' - ')[0]}</span>: {item.time}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-cyan-100 text-xs mt-1">Tempo médio de resposta</p>
+                </div>
+                <Clock className="h-12 w-12 text-cyan-200" />
               </div>
             </CardContent>
           </Card>
