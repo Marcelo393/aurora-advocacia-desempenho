@@ -137,7 +137,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
           {/* Informações adicionais */}
           <div className="pt-8 text-slate-400 text-sm space-y-2">
             <p>📋 4 seções principais • ⏱️ Tempo estimado: 10-15 minutos</p>
-            <p>💾 Progresso salvo automaticamente • 📧 Envio para juliacristina@morestoni.adv.br</p>
+            <p>💾 Progresso salvo automaticamente • 📧 Envio para juliacarvalho@morestoni.adv.br</p>
           </div>
         </div>
       </div>

@@ -41,7 +41,7 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome,
       
       toast({
         title: "PDF gerado com sucesso!",
-        description: "Seu arquivo foi baixado. Envie para juliacristina@morestoni.adv.br",
+        description: "Seu arquivo foi baixado. Envie para juliacarvalho@morestoni.adv.br",
       });
       
       if (soundService.isSoundEnabled()) {
@@ -191,7 +191,7 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome,
                   <strong>📧 Enviar para:</strong>
                 </p>
                 <p className="text-lg font-semibold text-slate-800">
-                  juliacristina@morestoni.adv.br
+                  juliacarvalho@morestoni.adv.br
                 </p>
               </div>
             </div>
