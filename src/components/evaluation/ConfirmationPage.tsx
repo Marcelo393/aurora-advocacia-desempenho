@@ -60,7 +60,9 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome,
     }
   };
 
-  const estimatedTime = Math.ceil(Math.random() * 5) + 8; // 9-13 minutes
+  const estimatedTime = startTime
+    ? Math.max(1, Math.round((Date.now() - startTime) / 1000 / 60))
+    : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 relative overflow-hidden">
@@ -141,7 +143,7 @@ const ConfirmationPage: React.FC<ConfirmationPageProps> = ({ formData, onGoHome,
                 <div className="text-sm opacity-90">Seções Completadas</div>
               </div>
               <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
-                <div className="text-3xl font-bold">{estimatedTime}</div>
+                <div className="text-3xl font-bold">{estimatedTime ?? '—'}</div>
                 <div className="text-sm opacity-90">Minutos Dedicados</div>
               </div>
               <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">

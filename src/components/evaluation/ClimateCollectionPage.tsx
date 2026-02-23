@@ -132,8 +132,6 @@ const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({
     try {
       const responses = JSON.parse(localStorage.getItem('evaluationResponses') || '[]');
       
-      console.log('📝 Dados do formulário a serem salvos:', formData);
-      
       // Calcular tempo de resposta
       const endTime = Date.now();
       const responseTime = startTime ? Math.round((endTime - startTime) / 1000 / 60) : null; // tempo em minutos
@@ -180,10 +178,7 @@ const ClimateCollectionPage: React.FC<ClimateCollectionPageProps> = ({
       
       responses.push(newResponse);
       localStorage.setItem('evaluationResponses', JSON.stringify(responses));
-      
-      console.log('✅ Dados salvos no localStorage:', newResponse);
-      console.log('📊 Total de respostas no localStorage:', responses.length);
-      
+
       toast({
         title: "Avaliação salva!",
         description: `Seus dados foram salvos com sucesso. Total: ${responses.length} avaliações`,
