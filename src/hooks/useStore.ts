@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import {
   getServerSnapshot,
   getSnapshot,
@@ -7,9 +7,19 @@ import {
 import type { StoreState } from "@/lib/types";
 
 export function useStore<T>(selector: (s: StoreState) => T): T {
+  const cacheRef = useRef<{ state: StoreState | null; value: T }>({
+    state: null,
+    value: undefined as unknown as T,
+  });
   return useSyncExternalStore(
     subscribe,
-    () => selector(getSnapshot()),
+    () => {
+      const s = getSnapshot();
+      if (cacheRef.current.state !== s) {
+        cacheRef.current = { state: s, value: selector(s) };
+      }
+      return cacheRef.current.value;
+    },
     () => selector(getServerSnapshot()),
   );
 }
