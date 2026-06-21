@@ -1,19 +1,22 @@
 import React, { useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { analyze, CarInput, SPORT, SILVIO } from "@/lib/box2/analise";
 import { gerarHTML } from "@/lib/box2/relatorio";
+import { computeInsights } from "@/lib/box2/insights";
+import {
+  loadSessions,
+  saveSession,
+  SessionSnapshot,
+  StoredRow,
+} from "@/lib/box2/storage";
 import Box2Report from "@/components/box2/Box2Report";
+import Box2Insights from "@/components/box2/Box2Insights";
+import Box2History from "@/components/box2/Box2History";
 
-interface Row {
-  num: number;
-  lap: string;
-  s1: string;
-  s2: string;
-  s3: string;
-  ideal: string;
-  laps: string;
-}
+type Row = StoredRow;
 
 const SPORT_NUMS = Object.keys(SPORT)
   .map(Number)
@@ -43,21 +46,25 @@ function rowsToCars(rows: Row[]): CarInput[] {
 }
 
 const Box2: React.FC = () => {
+  const [tab, setTab] = useState("analise");
   const [sessao, setSessao] = useState("Pré-temporada Interlagos");
   const [data, setData] = useState("28/02/2026");
   const [aviso, setAviso] = useState("Apenas 6 voltas do #2 — pace ainda imaturo.");
   const [rows, setRows] = useState<Row[]>(DEMO_ROWS);
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [currentId, setCurrentId] = useState<string | undefined>(undefined);
+  const [sessions, setSessions] = useState<SessionSnapshot[]>(() => loadSessions());
 
   const reportRef = useRef<HTMLDivElement>(null);
 
   const cars = useMemo(() => rowsToCars(rows), [rows]);
   const analysis = useMemo(() => analyze(cars), [cars]);
+  const insights = useMemo(() => computeInsights(cars), [cars]);
   const meta = { sessao, data, aviso };
 
   const update = (i: number, field: keyof Row, value: string) => {
-    setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
+    setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: field === "num" ? Number(value) : value } : r)));
   };
 
   const addRow = () => {
@@ -67,8 +74,33 @@ const Box2: React.FC = () => {
   };
 
   const removeRow = (i: number) => setRows((prev) => prev.filter((_, idx) => idx !== i));
+  const clearAll = () => {
+    setRows([emptyRow(SILVIO)]);
+    setCurrentId(undefined);
+  };
 
-  const clearAll = () => setRows([emptyRow(SILVIO)]);
+  const refreshSessions = () => setSessions(loadSessions());
+
+  const handleSave = () => {
+    if (!insights.silvioFound) {
+      toast.error("Inclua a melhor volta do #2 antes de salvar.");
+      return;
+    }
+    const snap = saveSession(meta, rows, currentId);
+    setCurrentId(snap.id);
+    refreshSessions();
+    toast.success("Sessão salva na memória. Veja a aba Evolução.");
+  };
+
+  const handleLoad = (s: SessionSnapshot) => {
+    setSessao(s.meta.sessao);
+    setData(s.meta.data);
+    setAviso(s.meta.aviso);
+    setRows(s.rows.map((r) => ({ ...emptyRow(r.num), ...r })));
+    setCurrentId(s.id);
+    setTab("analise");
+    toast.success("Sessão carregada para edição.");
+  };
 
   const fileBase = () =>
     (sessao || "box2")
@@ -135,7 +167,7 @@ const Box2: React.FC = () => {
     <div className="min-h-screen bg-[#0b0d10] text-slate-100">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="text-[11px] tracking-[0.2em] uppercase text-blue-500 font-bold">
             BOX 2 · Análise de pista
           </div>
@@ -146,155 +178,165 @@ const Box2: React.FC = () => {
             </span>
           </h1>
           <p className="text-slate-400 text-sm mt-2">
-            Classe Carrera Sport · monte os tempos da classe e gere o relatório. Exporte como imagem,
-            PDF ou HTML.
+            Classe Carrera Sport · análise inteligente da sessão e evolução treino a treino.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* ---- Coluna de entrada ---- */}
-          <div>
-            <div className="grid sm:grid-cols-3 gap-3 mb-5">
-              <label className="text-sm">
-                <span className="block text-slate-400 mb-1">Sessão</span>
-                <input className={inputCls} value={sessao} onChange={(e) => setSessao(e.target.value)} />
-              </label>
-              <label className="text-sm">
-                <span className="block text-slate-400 mb-1">Data</span>
-                <input className={inputCls} value={data} onChange={(e) => setData(e.target.value)} />
-              </label>
-              <label className="text-sm">
-                <span className="block text-slate-400 mb-1">Aviso (opcional)</span>
-                <input className={inputCls} value={aviso} onChange={(e) => setAviso(e.target.value)} />
-              </label>
-            </div>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="bg-slate-900 border border-slate-800">
+            <TabsTrigger value="analise" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              Análise
+            </TabsTrigger>
+            <TabsTrigger value="evolucao" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              Evolução {sessions.length > 0 && `(${sessions.length})`}
+            </TabsTrigger>
+          </TabsList>
 
-            {/* Foto de referência opcional */}
-            <div className="mb-5">
-              <span className="block text-slate-400 mb-1 text-sm">
-                Foto da cronometragem (referência para digitar)
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={onImage}
-                className="text-sm text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-blue-600 file:text-white file:px-3 file:py-1.5 file:text-sm hover:file:bg-blue-500"
-              />
-              {imgUrl && (
-                <img
-                  src={imgUrl}
-                  alt="cronometragem"
-                  className="mt-3 rounded-lg border border-slate-700 max-h-64 object-contain"
-                />
-              )}
-            </div>
+          {/* ===================== ANÁLISE ===================== */}
+          <TabsContent value="analise" className="mt-6">
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* ---- Coluna de entrada ---- */}
+              <div>
+                <div className="grid sm:grid-cols-3 gap-3 mb-5">
+                  <label className="text-sm">
+                    <span className="block text-slate-400 mb-1">Sessão</span>
+                    <input className={inputCls} value={sessao} onChange={(e) => setSessao(e.target.value)} />
+                  </label>
+                  <label className="text-sm">
+                    <span className="block text-slate-400 mb-1">Data</span>
+                    <input className={inputCls} value={data} onChange={(e) => setData(e.target.value)} />
+                  </label>
+                  <label className="text-sm">
+                    <span className="block text-slate-400 mb-1">Aviso (opcional)</span>
+                    <input className={inputCls} value={aviso} onChange={(e) => setAviso(e.target.value)} />
+                  </label>
+                </div>
 
-            {/* Tabela de tempos */}
-            <div className="overflow-x-auto rounded-lg border border-slate-800">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-900 text-slate-400">
-                  <tr>
-                    <th className="text-left font-medium px-2 py-2">Carro</th>
-                    <th className="font-medium px-1 py-2">Melhor volta</th>
-                    <th className="font-medium px-1 py-2">S1</th>
-                    <th className="font-medium px-1 py-2">S2</th>
-                    <th className="font-medium px-1 py-2">S3</th>
-                    <th className="font-medium px-1 py-2">Ideal</th>
-                    <th className="font-medium px-1 py-2">Voltas</th>
-                    <th className="px-1 py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r, i) => (
-                    <tr key={i} className={r.num === SILVIO ? "bg-blue-500/10" : ""}>
-                      <td className="px-2 py-1.5">
-                        <select
-                          className={inputCls}
-                          value={r.num}
-                          onChange={(e) => update(i, "num", e.target.value)}
-                        >
-                          {SPORT_NUMS.map((n) => (
-                            <option key={n} value={n}>
-                              #{n} {SPORT[n]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <input className={inputCls} placeholder="1:33.085" value={r.lap} onChange={(e) => update(i, "lap", e.target.value)} />
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <input className={inputCls} placeholder="—" value={r.s1} onChange={(e) => update(i, "s1", e.target.value)} />
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <input className={inputCls} placeholder="—" value={r.s2} onChange={(e) => update(i, "s2", e.target.value)} />
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <input className={inputCls} placeholder="—" value={r.s3} onChange={(e) => update(i, "s3", e.target.value)} />
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <input className={inputCls} placeholder="1:32.721" value={r.ideal} onChange={(e) => update(i, "ideal", e.target.value)} />
-                      </td>
-                      <td className="px-1 py-1.5 w-16">
-                        <input className={inputCls} placeholder="6" value={r.laps} onChange={(e) => update(i, "laps", e.target.value)} />
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <button
-                          onClick={() => removeRow(i)}
-                          className="text-slate-500 hover:text-red-400 px-2"
-                          title="Remover"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                {/* Foto de referência opcional */}
+                <div className="mb-5">
+                  <span className="block text-slate-400 mb-1 text-sm">
+                    Foto da cronometragem (referência para digitar)
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={onImage}
+                    className="text-sm text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-blue-600 file:text-white file:px-3 file:py-1.5 file:text-sm hover:file:bg-blue-500"
+                  />
+                  {imgUrl && (
+                    <img
+                      src={imgUrl}
+                      alt="cronometragem"
+                      className="mt-3 rounded-lg border border-slate-700 max-h-64 object-contain"
+                    />
+                  )}
+                </div>
 
-            <div className="flex flex-wrap gap-3 mt-4">
-              <button onClick={addRow} className="rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm">
-                + Adicionar carro
-              </button>
-              <button onClick={() => setRows(DEMO_ROWS)} className="rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm">
-                Carregar exemplo
-              </button>
-              <button onClick={clearAll} className="rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm">
-                Limpar
-              </button>
-            </div>
+                {/* Tabela de tempos */}
+                <div className="overflow-x-auto rounded-lg border border-slate-800">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-900 text-slate-400">
+                      <tr>
+                        <th className="text-left font-medium px-2 py-2">Carro</th>
+                        <th className="font-medium px-1 py-2">Melhor volta</th>
+                        <th className="font-medium px-1 py-2">S1</th>
+                        <th className="font-medium px-1 py-2">S2</th>
+                        <th className="font-medium px-1 py-2">S3</th>
+                        <th className="font-medium px-1 py-2">Ideal</th>
+                        <th className="font-medium px-1 py-2">Voltas</th>
+                        <th className="px-1 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r, i) => (
+                        <tr key={i} className={r.num === SILVIO ? "bg-blue-500/10" : ""}>
+                          <td className="px-2 py-1.5">
+                            <select className={inputCls} value={r.num} onChange={(e) => update(i, "num", e.target.value)}>
+                              {SPORT_NUMS.map((n) => (
+                                <option key={n} value={n}>
+                                  #{n} {SPORT[n]}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-1 py-1.5">
+                            <input className={inputCls} placeholder="1:33.085" value={r.lap} onChange={(e) => update(i, "lap", e.target.value)} />
+                          </td>
+                          <td className="px-1 py-1.5">
+                            <input className={inputCls} placeholder="—" value={r.s1} onChange={(e) => update(i, "s1", e.target.value)} />
+                          </td>
+                          <td className="px-1 py-1.5">
+                            <input className={inputCls} placeholder="—" value={r.s2} onChange={(e) => update(i, "s2", e.target.value)} />
+                          </td>
+                          <td className="px-1 py-1.5">
+                            <input className={inputCls} placeholder="—" value={r.s3} onChange={(e) => update(i, "s3", e.target.value)} />
+                          </td>
+                          <td className="px-1 py-1.5">
+                            <input className={inputCls} placeholder="1:32.721" value={r.ideal} onChange={(e) => update(i, "ideal", e.target.value)} />
+                          </td>
+                          <td className="px-1 py-1.5 w-16">
+                            <input className={inputCls} placeholder="6" value={r.laps} onChange={(e) => update(i, "laps", e.target.value)} />
+                          </td>
+                          <td className="px-1 py-1.5">
+                            <button onClick={() => removeRow(i)} className="text-slate-500 hover:text-red-400 px-2" title="Remover">
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-            <p className="text-xs text-slate-500 mt-4 leading-relaxed">
-              Formato dos tempos: <code className="text-slate-300">1:33.085</code> para voltas,{" "}
-              <code className="text-slate-300">26.000</code> para setores. Deixe em branco o que não
-              conseguir ler — nunca invente um tempo. A análise compara somente dentro da Sport.
-            </p>
-          </div>
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <button onClick={addRow} className="rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm">
+                    + Adicionar carro
+                  </button>
+                  <button onClick={() => { setRows(DEMO_ROWS); setCurrentId(undefined); }} className="rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm">
+                    Carregar exemplo
+                  </button>
+                  <button onClick={clearAll} className="rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm">
+                    Limpar
+                  </button>
+                  <button onClick={handleSave} className="rounded-md bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-sm font-medium">
+                    {currentId ? "Atualizar sessão" : "Salvar sessão"}
+                  </button>
+                </div>
 
-          {/* ---- Coluna do relatório ---- */}
-          <div>
-            <div className="flex flex-wrap gap-3 mb-4">
-              <button onClick={downloadPNG} disabled={busy} className="rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 text-sm font-medium">
-                {busy ? "Gerando…" : "Baixar PNG"}
-              </button>
-              <button onClick={downloadPDF} disabled={busy} className="rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 text-sm font-medium">
-                Baixar PDF
-              </button>
-              <button onClick={downloadHTML} className="rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm font-medium">
-                Baixar HTML
-              </button>
-            </div>
-
-            {!analysis.silvioFound && (
-              <div className="mb-3 text-sm text-amber-300/90 bg-amber-400/10 border border-amber-400/20 rounded-md px-3 py-2">
-                Inclua a melhor volta do #2 (Silvio) para a análise completa.
+                <p className="text-xs text-slate-500 mt-4 leading-relaxed">
+                  Formato dos tempos: <code className="text-slate-300">1:33.085</code> para voltas,{" "}
+                  <code className="text-slate-300">26.000</code> para setores. Deixe em branco o que não conseguir
+                  ler — nunca invente um tempo. A análise compara somente dentro da Sport.
+                </p>
               </div>
-            )}
 
-            <Box2Report ref={reportRef} analysis={analysis} meta={meta} />
-          </div>
-        </div>
+              {/* ---- Coluna de insights + relatório ---- */}
+              <div className="space-y-6">
+                <Box2Insights insights={insights} />
+
+                <div>
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    <button onClick={downloadPNG} disabled={busy} className="rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 text-sm font-medium">
+                      {busy ? "Gerando…" : "Baixar PNG"}
+                    </button>
+                    <button onClick={downloadPDF} disabled={busy} className="rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 text-sm font-medium">
+                      Baixar PDF
+                    </button>
+                    <button onClick={downloadHTML} className="rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm font-medium">
+                      Baixar HTML
+                    </button>
+                  </div>
+                  <Box2Report ref={reportRef} analysis={analysis} meta={meta} />
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ===================== EVOLUÇÃO ===================== */}
+          <TabsContent value="evolucao" className="mt-6">
+            <Box2History sessions={sessions} onChange={refreshSessions} onLoad={handleLoad} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
