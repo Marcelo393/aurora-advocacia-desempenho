@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
@@ -337,6 +338,13 @@ const Box2: React.FC = () => {
             <Box2History sessions={sessions} onChange={refreshSessions} onLoad={handleLoad} />
           </TabsContent>
         </Tabs>
+
+        <div className="mt-10 pt-6 border-t border-slate-800 text-center text-xs text-slate-600">
+          BOX 2 · classe Sport ·{" "}
+          <Link to="/avaliacao" className="text-slate-500 hover:text-slate-300 underline underline-offset-2">
+            App de avaliação da advocacia
+          </Link>
+        </div>
       </div>
     </div>
   );
