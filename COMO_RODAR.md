@@ -28,6 +28,10 @@ confirma se o robô conseguiu falar com o Diário de Justiça.
 Se aparecer a mensagem de que o Python não está instalado, volte para a seção
 anterior.
 
+O robô descobre sozinho o formato que o DJEN exige — testa as combinações
+possíveis de nome de parâmetro, de formato de data e de número de OAB até uma
+funcionar. Não é preciso alterar nada no programa.
+
 ## Passo 2 — gerar a planilha de prazos
 
 Dê dois cliques em **`2_GERAR_PRAZOS.bat`**.
@@ -45,6 +49,22 @@ classificação automática. Nesse caso:
 3. Ele devolve um arquivo chamado **`classificacoes.json`**.
 4. Coloque esse arquivo nesta mesma pasta e dê dois cliques no
    `2_GERAR_PRAZOS.bat` de novo. Agora a planilha sai completa.
+
+## Passo 3 (opcional) — deixar o robô ler as intimações sozinho
+
+Enquanto o passo acima depender de mandar arquivo para o Marcelo, o robô não
+está andando sozinho. Para resolver isso de vez, dê dois cliques em
+**`3_CONFIGURAR_CHAVE_IA.bat`** e cole a chave.
+
+A chave se obtém em <https://console.anthropic.com>. O custo é de cerca de três
+centavos por intimação — algo em torno de seis reais por mês no volume do
+escritório.
+
+O programa testa a chave na hora e diz se funcionou. **Depois de configurar,
+feche todas as janelas pretas de prompt** — só assim o passo 2 enxerga a chave.
+
+Isso é opcional: sem a chave o robô continua funcionando, só que com a leitura
+manual descrita no passo 2.
 
 ## Como ler a planilha
 

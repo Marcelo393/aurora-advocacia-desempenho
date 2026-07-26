@@ -12,8 +12,10 @@ from djen_prazos import (
     AnoSemFeriadosError,
     calcular_prazo_fatal,
     data_publicacao_djen,
+    deduplicar,
     detectar_rito,
     montar_linha,
+    normalizar_item,
     sanear_classificacao,
     trecho_confere,
 )
@@ -202,6 +204,59 @@ class TestRegrasDeRevisao(unittest.TestCase):
         })
         linha = montar_linha(item, c, date(2026, 7, 26))
         self.assertEqual(linha["status"], "REVISAR")
+
+
+class TestDeduplicacao(unittest.TestCase):
+    """A duplicata some; a intimacao diferente NUNCA some."""
+
+    ERNESTO = {"nome": "Ernesto Zulmir Morestoni", "oab": "11666", "uf": "SC"}
+    CARLOS = {"nome": "Carlos Oscar Krueger", "oab": "27320", "uf": "SC"}
+
+    def bruto(self, texto, ident=None, data="2026-07-20"):
+        item = {
+            "numero_processo": "5001234-56.2026.4.04.7205",
+            "data_disponibilizacao": data,
+            "siglaTribunal": "TRF4",
+            "nomeOrgao": "1º JEF de Blumenau",
+            "texto": texto,
+        }
+        if ident:
+            item["hash"] = ident
+        return item
+
+    def test_mesma_intimacao_nas_duas_oabs_vira_uma_linha(self):
+        itens = [
+            normalizar_item(self.bruto("Fica intimado do laudo.", "abc"), self.ERNESTO),
+            normalizar_item(self.bruto("Fica intimado do laudo.", "abc"), self.CARLOS),
+        ]
+        resultado = deduplicar(itens)
+        self.assertEqual(len(resultado), 1)
+        self.assertEqual(len(resultado[0]["advogados_captura"]), 2)
+
+    def test_sem_identificador_duas_intimacoes_do_mesmo_processo_nao_somem(self):
+        # O caso perigoso: se a API nao mandar identificador e a chave fosse so
+        # o numero do processo, a segunda intimacao desapareceria calada.
+        itens = [
+            normalizar_item(self.bruto("Fica intimado do laudo pericial."), self.ERNESTO),
+            normalizar_item(self.bruto("Fica intimado da sentenca."), self.ERNESTO),
+        ]
+        self.assertEqual(len(deduplicar(itens)), 2)
+
+    def test_sem_identificador_a_duplicata_real_ainda_e_removida(self):
+        itens = [
+            normalizar_item(self.bruto("Fica intimado do laudo pericial."), self.ERNESTO),
+            normalizar_item(self.bruto("Fica intimado do laudo pericial."), self.CARLOS),
+        ]
+        resultado = deduplicar(itens)
+        self.assertEqual(len(resultado), 1)
+        self.assertEqual(len(resultado[0]["oabs_captura"]), 2)
+
+    def test_mesmo_teor_em_datas_diferentes_conta_como_duas(self):
+        itens = [
+            normalizar_item(self.bruto("Fica intimado.", data="2026-07-20"), self.ERNESTO),
+            normalizar_item(self.bruto("Fica intimado.", data="2026-07-27"), self.ERNESTO),
+        ]
+        self.assertEqual(len(deduplicar(itens)), 2)
 
 
 class TestSaneamento(unittest.TestCase):

@@ -15,15 +15,26 @@ Uso tipico:
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import re
 import sys
+import time
 import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
+
+# O terminal do Windows nao usa acentuacao UTF-8 por padrao. Sem isto, imprimir
+# "1º JEF de Blumenau" derruba o programa no meio da execucao.
+for _saida in (sys.stdout, sys.stderr):
+    if hasattr(_saida, "reconfigure"):
+        try:
+            _saida.reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass
 
 # =====================================================================
 # 1. CONFIGURACAO - mexa aqui
@@ -270,6 +281,49 @@ CONJUNTOS_DE_PARAMETROS = [
      "pag": "page", "tam": "size"},
 ]
 
+# A data pode ser exigida em qualquer um destes formatos, e o numero da OAB
+# pode precisar de zeros a esquerda. Todas as combinacoes sao testadas.
+FORMATOS_DATA = [
+    ("AAAA-MM-DD", lambda d: d.isoformat()),
+    ("DD/MM/AAAA", lambda d: d.strftime("%d/%m/%Y")),
+]
+FORMATOS_OAB = [
+    ("como cadastrado", lambda o: o),
+    ("com zeros a esquerda", lambda o: o.zfill(6)),
+]
+
+PAUSA_ENTRE_CHAMADAS = 0.5  # segundos, para nao martelar o servidor do CNJ
+
+
+def perfis_possiveis():
+    """Todas as combinacoes de nomes de parametro, formato de data e de OAB."""
+    for nomes in CONJUNTOS_DE_PARAMETROS:
+        for rotulo_data, fmt_data in FORMATOS_DATA:
+            for rotulo_oab, fmt_oab in FORMATOS_OAB:
+                yield {"nomes": nomes,
+                       "rotulo_data": rotulo_data, "fmt_data": fmt_data,
+                       "rotulo_oab": rotulo_oab, "fmt_oab": fmt_oab}
+
+
+def descrever_perfil(perfil):
+    n = perfil["nomes"]
+    return ("%s / %s / %s / %s | data em %s | OAB %s | %s + %s"
+            % (n["oab"], n["uf"], n["ini"], n["fim"], perfil["rotulo_data"],
+               perfil["rotulo_oab"], n["pag"], n["tam"]))
+
+
+def montar_url(perfil, advogado, data_ini, data_fim, pagina, tamanho):
+    n = perfil["nomes"]
+    params = {
+        n["oab"]: perfil["fmt_oab"](advogado["oab"]),
+        n["uf"]: advogado["uf"],
+        n["ini"]: perfil["fmt_data"](data_ini),
+        n["fim"]: perfil["fmt_data"](data_fim),
+        n["pag"]: str(pagina),
+        n["tam"]: str(tamanho),
+    }
+    return API_BASE + "?" + urllib.parse.urlencode(params)
+
 # Nomes possiveis de cada campo da RESPOSTA. Pega o primeiro que existir.
 CAMPOS_TEOR = ["texto", "teor", "conteudo", "textoComunicacao", "texto_comunicacao",
                "descricao", "teorComunicacao"]
@@ -337,31 +391,79 @@ def _http_get(url):
     return json.loads(bruto)
 
 
-def consultar_djen(advogado, data_ini, data_fim, nomes=None, verbose=True):
+def consultar_djen(advogado, data_ini, data_fim, perfil, verbose=True):
     """Consulta o DJEN paginando ate acabar. Devolve lista de itens crus."""
-    nomes = nomes or CONJUNTOS_DE_PARAMETROS[0]
     coletados = []
     pagina = 1
     while pagina <= MAX_PAGINAS:
-        params = {
-            nomes["oab"]: advogado["oab"],
-            nomes["uf"]: advogado["uf"],
-            nomes["ini"]: data_ini.isoformat(),
-            nomes["fim"]: data_fim.isoformat(),
-            nomes["pag"]: str(pagina),
-            nomes["tam"]: str(ITENS_POR_PAGINA),
-        }
-        url = API_BASE + "?" + urllib.parse.urlencode(params)
+        url = montar_url(perfil, advogado, data_ini, data_fim,
+                         pagina, ITENS_POR_PAGINA)
         payload = _http_get(url)
         itens = extrair_lista(payload)
         if verbose:
             total = pegar(payload, CAMPOS_TOTAL, "?") if isinstance(payload, dict) else "?"
-            print("   pagina %d: %d itens (total informado: %s)" % (pagina, len(itens), total))
+            print("   pagina %d: %d itens (total informado: %s)"
+                  % (pagina, len(itens), total))
         coletados.extend(itens)
         if len(itens) < ITENS_POR_PAGINA:
             break
         pagina += 1
+        time.sleep(PAUSA_ENTRE_CHAMADAS)
     return coletados
+
+
+def descobrir_perfil(advogado, data_ini, data_fim, verbose=True):
+    """Acha sozinho a combinacao de parametros que a API aceita.
+
+    Devolve (perfil, motivo). Prefere um perfil que traga resultados; se todos
+    responderem vazio, devolve o primeiro que ao menos respondeu sem erro,
+    porque zero intimacoes tambem e uma resposta legitima.
+    """
+    primeiro_que_respondeu = None
+    erros = []
+    for perfil in perfis_possiveis():
+        url = montar_url(perfil, advogado, data_ini, data_fim, 1, 5)
+        try:
+            payload = _http_get(url)
+        except urllib.error.HTTPError as e:
+            erros.append("HTTP %s (%s)" % (e.code, e.reason))
+            time.sleep(PAUSA_ENTRE_CHAMADAS)
+            continue
+        except Exception as e:
+            erros.append(str(e))
+            time.sleep(PAUSA_ENTRE_CHAMADAS)
+            continue
+        itens = extrair_lista(payload)
+        if itens:
+            if verbose:
+                print("   parametros aceitos: %s" % descrever_perfil(perfil))
+            return perfil, "trouxe resultados"
+        if primeiro_que_respondeu is None:
+            primeiro_que_respondeu = perfil
+        time.sleep(PAUSA_ENTRE_CHAMADAS)
+
+    if primeiro_que_respondeu is not None:
+        if verbose:
+            print("   a API respondeu, mas sem nenhuma intimacao no periodo.")
+            print("   parametros usados: %s" % descrever_perfil(primeiro_que_respondeu))
+        return primeiro_que_respondeu, "respondeu vazio"
+
+    if verbose:
+        print("   NENHUMA combinacao funcionou. Ultimos erros: %s"
+              % "; ".join(erros[-3:]))
+    return None, "; ".join(erros[-3:]) or "sem resposta"
+
+
+def _testar_alcance():
+    """Distingue 'a internet nao chega no DJEN' de 'os parametros estao errados'."""
+    try:
+        _http_get(API_BASE)
+        return True, "o servidor respondeu"
+    except urllib.error.HTTPError as e:
+        # Respondeu, mesmo que reclamando da falta de parametros: alcance OK.
+        return True, "o servidor respondeu com HTTP %s (%s)" % (e.code, e.reason)
+    except Exception as e:
+        return False, str(e)
 
 
 def diagnostico_parametros():
@@ -369,33 +471,74 @@ def diagnostico_parametros():
     adv = ADVOGADOS[0]
     fim = date.today()
     ini = fim - timedelta(days=DIAS_JANELA_PADRAO)
-    print("Diagnostico contra %s" % API_BASE)
-    print("Advogado de teste: OAB/%s %s\n" % (adv["uf"], adv["oab"]))
-    for i, nomes in enumerate(CONJUNTOS_DE_PARAMETROS, 1):
-        params = {
-            nomes["oab"]: adv["oab"], nomes["uf"]: adv["uf"],
-            nomes["ini"]: ini.isoformat(), nomes["fim"]: fim.isoformat(),
-            nomes["pag"]: "1", nomes["tam"]: "5",
-        }
-        url = API_BASE + "?" + urllib.parse.urlencode(params)
-        print("[%d] %s" % (i, url))
+
+    print("=" * 70)
+    print("DIAGNOSTICO DO ROBO DE PRAZOS - Escritorio Morestoni")
+    print("Gerado em %s" % datetime.now().strftime("%d/%m/%Y as %H:%M"))
+    print("Python %s em %s" % (sys.version.split()[0], sys.platform))
+    print("Endereco testado: %s" % API_BASE)
+    print("Advogado de teste: OAB/%s %s" % (adv["uf"], adv["oab"]))
+    print("Periodo: %s a %s" % (ini.strftime("%d/%m/%Y"), fim.strftime("%d/%m/%Y")))
+    print("=" * 70)
+
+    alcancou, detalhe = _testar_alcance()
+    print("\n[1] A internet deste computador chega ao DJEN?")
+    print("    %s - %s" % ("SIM" if alcancou else "NAO", detalhe))
+    if not alcancou:
+        print("\n    O robo nao conseguiu sequer falar com o servidor do CNJ.")
+        print("    Isso NAO e erro de parametro. Pode ser antivirus, firewall")
+        print("    ou bloqueio da rede do escritorio. Mande este arquivo para")
+        print("    quem cuida da informatica.")
+        return None
+
+    print("\n[2] Qual combinacao de parametros a API aceita?")
+    achou = None
+    for i, perfil in enumerate(perfis_possiveis(), 1):
+        url = montar_url(perfil, adv, ini, fim, 1, 5)
+        print("\n    tentativa %d: %s" % (i, descrever_perfil(perfil)))
+        print("    %s" % url)
         try:
             payload = _http_get(url)
-            itens = extrair_lista(payload)
-            print("    OK - %d itens nesta pagina" % len(itens))
-            if itens:
-                print("    CAMPOS DA RESPOSTA: %s" % ", ".join(sorted(itens[0].keys())))
-                print("    AMOSTRA: %s" % json.dumps(itens[0], ensure_ascii=False)[:1200])
-                print("\n>>> Use este conjunto de parametros no topo do arquivo.")
-                return nomes
         except urllib.error.HTTPError as e:
-            print("    FALHOU HTTP %s - %s" % (e.code, e.reason))
-        except Exception as e:  # rede, DNS, proxy, JSON invalido
-            print("    FALHOU: %s" % e)
-        print("")
-    print("Nenhum conjunto funcionou. Abra https://comunica.pje.jus.br/consulta,")
-    print("faca uma busca, e veja a aba Rede do navegador para copiar a URL real.")
-    return None
+            print("    -> recusado: HTTP %s (%s)" % (e.code, e.reason))
+            time.sleep(PAUSA_ENTRE_CHAMADAS)
+            continue
+        except Exception as e:
+            print("    -> falhou: %s" % e)
+            time.sleep(PAUSA_ENTRE_CHAMADAS)
+            continue
+
+        itens = extrair_lista(payload)
+        print("    -> aceito, %d intimacoes nesta pagina" % len(itens))
+        if itens:
+            achou = perfil
+            break
+        time.sleep(PAUSA_ENTRE_CHAMADAS)
+
+    if achou is None:
+        print("\n    A API respondeu, mas nenhuma combinacao trouxe intimacoes.")
+        print("    Duas explicacoes possiveis, e so um humano decide qual:")
+        print("      a) nao houve mesmo nenhuma publicacao no periodo; ou")
+        print("      b) os nomes dos parametros mudaram.")
+        print("    Para tirar a duvida: abra https://comunica.pje.jus.br/consulta,")
+        print("    faca a mesma busca na tela e veja se aparece alguma coisa.")
+        return None
+
+    print("\n[3] Como o DJEN devolve os dados")
+    itens = extrair_lista(_http_get(montar_url(achou, adv, ini, fim, 1, 5)))
+    print("    CAMPOS DE CADA INTIMACAO:")
+    print("    %s" % ", ".join(sorted(str(k) for k in itens[0].keys())))
+    for n, item in enumerate(itens[:2], 1):
+        print("\n    AMOSTRA %d:" % n)
+        print("    %s" % json.dumps(item, ensure_ascii=False)[:1500])
+
+    print("\n" + "=" * 70)
+    print("RESULTADO: funcionou. Combinacao aceita:")
+    print("  %s" % descrever_perfil(achou))
+    print("O robo descobre isso sozinho a cada execucao, entao nao e preciso")
+    print("alterar nada. Pode rodar o 2_GERAR_PRAZOS.bat.")
+    print("=" * 70)
+    return achou
 
 
 # =====================================================================
@@ -409,8 +552,21 @@ def normalizar_item(bruto, advogado):
     ident = str(pegar(bruto, CAMPOS_ID, "")).strip()
     orgao = str(pegar(bruto, CAMPOS_ORGAO, "")).strip()
     tribunal = str(pegar(bruto, CAMPOS_TRIBUNAL, "")).strip()
+    digitos = re.sub(r"\D", "", processo)
+
+    # Se a API nao trouxer identificador, NAO usar so o numero do processo como
+    # chave: duas intimacoes diferentes do mesmo processo virariam uma linha so
+    # e a segunda sumiria sem ninguem perceber. Nesse caso a impressao digital
+    # do proprio teor entra na chave.
+    if ident:
+        chave = "%s|%s" % (ident, digitos)
+    else:
+        impressao = hashlib.sha1(
+            normalizar(teor)[:4000].encode("utf-8")).hexdigest()[:12]
+        chave = "sem-id-%s|%s|%s" % (impressao, data_txt, digitos)
+
     return {
-        "chave": "%s|%s" % (ident, re.sub(r"\D", "", processo)),
+        "chave": chave,
         "id_comunicacao": ident,
         "numero_processo": processo,
         "data_disponibilizacao": data_txt,
@@ -508,6 +664,47 @@ def classificar_com_ia(teor, chave_api):
     return json.loads(texto[inicio:fim + 1])
 
 
+def testar_chave_ia():
+    """Confere se a chave de classificacao automatica esta funcionando."""
+    chave = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    print("Testando a chave de classificacao automatica...\n")
+    if not chave:
+        print("Nenhuma chave configurada neste computador.")
+        print("O robo vai funcionar assim mesmo, mas as intimacoes precisarao")
+        print("ser lidas manualmente (arquivo %s)." % ARQUIVO_CLASSIFICACOES)
+        return 1
+
+    print("Chave encontrada (termina em ...%s)." % chave[-4:])
+    teor = ("Fica a parte autora intimada do laudo pericial juntado ao evento 58, "
+            "para manifestacao no prazo de 15 (quinze) dias uteis.")
+    try:
+        resultado = sanear_classificacao(classificar_com_ia(teor, chave))
+    except urllib.error.HTTPError as e:
+        print("\nA chave foi RECUSADA. Codigo do erro: HTTP %s (%s)." % (e.code, e.reason))
+        if e.code in (401, 403):
+            print("Isso quer dizer chave invalida, apagada ou sem permissao.")
+            print("Gere outra em https://console.anthropic.com e rode de novo.")
+        elif e.code == 429:
+            print("Isso quer dizer limite de uso atingido ou creditos zerados.")
+        else:
+            print("Mande esta mensagem para o Marcelo.")
+        return 1
+    except Exception as e:
+        print("\nNao foi possivel testar: %s" % e)
+        print("Pode ser bloqueio de rede. Mande esta mensagem para o Marcelo.")
+        return 1
+
+    print("\nFUNCIONOU. A classificacao de teste devolveu:")
+    print("  tipo do ato ...: %s" % resultado["tipo_ato"])
+    print("  materia .......: %s" % resultado["materia"])
+    print("  tem prazo .....: %s" % ("sim" if resultado["ha_prazo"] else "nao"))
+    print("  prazo em dias .: %s" % (resultado["prazo_dias"] or "-"))
+    print("  contagem ......: %s" % resultado["contagem"])
+    print("  confianca .....: %.2f" % resultado["confianca"])
+    print("\nO robo ja pode rodar sozinho, sem depender de leitura manual.")
+    return 0
+
+
 def sanear_classificacao(c):
     """Forca os conjuntos fechados e joga fora qualquer data que a IA devolva."""
     c = dict(c or {})
@@ -562,6 +759,32 @@ def obter_classificacoes(itens, usar_ia):
     with open(ARQUIVO_CLASSIFICACOES, "r", encoding="utf-8") as f:
         arquivo = json.load(f)
     mapa = arquivo.get("classificacoes", arquivo)
+
+    faltando = [it for it in itens if it["chave"] not in mapa]
+
+    # Se NENHUMA intimacao capturada consta do arquivo, ele e de outra rodada
+    # (tipicamente a amostra simulada). Gerar a planilha assim produziria um
+    # relatorio inteiro sem prazo nenhum - o retrato do erro que este sistema
+    # existe para evitar. Melhor parar e dizer o que houve.
+    if faltando and len(faltando) == len(itens):
+        print("\n" + "=" * 60)
+        print("PARADO DE PROPOSITO - nada foi gerado.")
+        print("")
+        print("O arquivo %s nao corresponde a nenhuma" % ARQUIVO_CLASSIFICACOES)
+        print("das %d intimacoes capturadas agora. Ele e de outra rodada." % len(itens))
+        print("")
+        print("O que fazer: mande o arquivo %s" % ARQUIVO_TEORES)
+        print("para o Marcelo e substitua o %s pelo que" % ARQUIVO_CLASSIFICACOES)
+        print("ele devolver. Ou configure a leitura automatica com o")
+        print("3_CONFIGURAR_CHAVE_IA.bat, e o robo faz sozinho.")
+        print("=" * 60)
+        sys.exit(2)
+
+    if faltando:
+        print("   ATENCAO: %d de %d intimacoes nao constam do arquivo de"
+              % (len(faltando), len(itens)))
+        print("   classificacao. Elas vao para revisao humana obrigatoria.")
+
     for it in itens:
         resultado[it["chave"]] = sanear_classificacao(mapa.get(it["chave"]))
         if it["chave"] not in mapa:
@@ -720,23 +943,37 @@ def capturar(args):
             adv = bloco["advogado"]
             for bruto in bloco["itens"]:
                 itens.append(normalizar_item(bruto, adv))
-    else:
-        print("Consultando DJEN de %s a %s\n" % (ini.isoformat(), fim.isoformat()))
-        for adv in ADVOGADOS:
-            print(" %s - OAB/%s %s" % (adv["nome"], adv["uf"], adv["oab"]))
-            try:
-                brutos = consultar_djen(adv, ini, fim)
-            except urllib.error.HTTPError as e:
-                print("   ERRO HTTP %s (%s). Rode --diagnostico." % (e.code, e.reason))
-                continue
-            except Exception as e:
-                print("   ERRO DE REDE: %s" % e)
-                print("   Rode --diagnostico para conferir os parametros.")
-                continue
-            print("   %d comunicacoes" % len(brutos))
-            for bruto in brutos:
-                itens.append(normalizar_item(bruto, adv))
-    return itens
+        return itens, "modo offline: %s" % args.offline
+
+    print("Consultando DJEN de %s a %s\n"
+          % (ini.strftime("%d/%m/%Y"), fim.strftime("%d/%m/%Y")))
+    print(" Descobrindo o formato aceito pela API...")
+    perfil, motivo = descobrir_perfil(ADVOGADOS[0], ini, fim)
+    if perfil is None:
+        print("\n ERRO: nao foi possivel falar com o DJEN.")
+        print(" Motivo: %s" % motivo)
+        print(" Rode o 1_TESTAR_CONEXAO.bat e mande o diagnostico.txt.")
+        return itens, "falhou: %s" % motivo
+
+    resumo = "%s (%s)" % (descrever_perfil(perfil), motivo)
+    print("")
+    for adv in ADVOGADOS:
+        print(" %s - OAB/%s %s" % (adv["nome"], adv["uf"], adv["oab"]))
+        try:
+            brutos = consultar_djen(adv, ini, fim, perfil)
+        except urllib.error.HTTPError as e:
+            print("   ERRO HTTP %s (%s). Rode o 1_TESTAR_CONEXAO.bat."
+                  % (e.code, e.reason))
+            continue
+        except Exception as e:
+            print("   ERRO DE REDE: %s" % e)
+            print("   Rode o 1_TESTAR_CONEXAO.bat e mande o diagnostico.txt.")
+            continue
+        print("   %d comunicacoes" % len(brutos))
+        for bruto in brutos:
+            itens.append(normalizar_item(bruto, adv))
+        time.sleep(PAUSA_ENTRE_CHAMADAS)
+    return itens, resumo
 
 
 def main():
@@ -750,19 +987,25 @@ def main():
     p.add_argument("--saida", default="prazos.csv", help="arquivo CSV de saida")
     p.add_argument("--diagnostico", action="store_true",
                    help="descobre os nomes de parametro que a API aceita")
+    p.add_argument("--testar-chave", action="store_true",
+                   help="confere se a chave de classificacao automatica funciona")
     args = p.parse_args()
 
     if args.diagnostico:
         diagnostico_parametros()
         return 0
 
-    itens = capturar(args)
+    if args.testar_chave:
+        return testar_chave_ia()
+
+    itens, resumo_captura = capturar(args)
     print("\nTotal capturado (com duplicatas): %d" % len(itens))
     itens = deduplicar(itens)
     print("Depois de remover duplicatas: %d" % len(itens))
 
     with open(ARQUIVO_TEORES, "w", encoding="utf-8") as f:
         json.dump({"gerado_em": datetime.now().isoformat(timespec="seconds"),
+                   "parametros_da_api": resumo_captura,
                    "itens": itens}, f, ensure_ascii=False, indent=2)
     print("Teores gravados em %s" % ARQUIVO_TEORES)
 
