@@ -42,6 +42,13 @@ Fora do escopo, aceito e sabido — se aparecer, marcar como exceção:
 2. pautas de audiência e de perícia;
 3. o teor do documento quando a publicação só diz "fica intimado do evento 42".
 
+Sobre o item 1, a pesquisa de 26/07/2026 trouxe boa notícia: pela **Resolução
+CNJ 569/2024**, o Domicílio Judicial Eletrônico passou a servir apenas à citação
+e à intimação **pessoal das partes** (PJ e entes públicos). O advogado é
+intimado pelo DJEN, e é dali que corre o prazo — mudança feita a pedido da OAB.
+Como a carteira do escritório é de pessoas físicas, o buraco é menor do que
+parecia. Detalhes e fontes em `MERCADO.md`.
+
 ## 4. As três regras invioláveis
 
 1. **A IA nunca calcula data.** Ela devolve apenas quantidade de dias e forma de
@@ -77,7 +84,10 @@ data em que o relatório foi gerado.
 | `1_TESTAR_CONEXAO.bat` | Atalho de dois cliques para Windows. Roda o diagnóstico e grava `diagnostico.txt`. |
 | `2_GERAR_PRAZOS.bat` | Atalho de dois cliques. Gera a planilha e abre no Excel. Trata o caso "sem chave de IA". |
 | `3_CONFIGURAR_CHAVE_IA.bat` | Guarda a `ANTHROPIC_API_KEY` na máquina (`setx`) e testa na hora com `--testar-chave`. |
+| `4_IMPORTAR_PLANILHA.bat` | Aceita arrastar-e-soltar uma planilha (.csv/.xlsx) de outro serviço. |
 | `COMO_RODAR.md` | Passo a passo em linguagem comum, para quem vai executar no escritório. |
+| `AMANHA.md` | Lista curta e ordenada do que fazer na primeira execução real. |
+| `MERCADO.md` | Pesquisa de mercado, preços, e a recomendação de não contratar nada agora. |
 
 Comandos:
 
@@ -86,8 +96,17 @@ python3 djen_prazos.py --diagnostico          # descobre os parâmetros da API
 python3 djen_prazos.py --testar-chave         # confere a ANTHROPIC_API_KEY
 python3 djen_prazos.py --sem-classificacao    # só captura, para conferir
 python3 djen_prazos.py                        # ciclo completo -> prazos.csv
+python3 djen_prazos.py --importar recorte.xlsx        # segunda fonte: planilha
 python3 djen_prazos.py --offline exemplos_djen.json   # roda sem rede, com amostra
 ```
+
+**Segunda fonte (`--importar`).** Lê planilha `.csv` ou `.xlsx` exportada por
+outro serviço — na prática, o Sistema Advise que a OAB/SC dá de graça aos
+inscritos. Casa os cabeçalhos de forma tolerante (acento, maiúscula, texto
+extra), aceita data em `DD/MM/AAAA`, `AAAA-MM-DD` e no número de série do Excel,
+e joga o resultado no mesmo caminho da captura do DJEN: deduplicação,
+classificação, motor de prazo e CSV. Serve para trabalhar com o DJEN fora do ar
+e para conferir se a nossa captura está completa. Ver `MERCADO.md`.
 
 ## 6. Situação da API (ETAPA 1 — PENDENTE, LEIA COM ATENÇÃO)
 
@@ -291,6 +310,11 @@ completo, com captura e controle de prazo embutidos).
 5. Conferir se o DJEN separa as intimações por polo/destinatário — pode haver
    publicação captada pela OAB em que o escritório é da parte contrária ou em
    que o prazo é de outro advogado.
+5b. Ativar os dois serviços gratuitos da OAB/SC e da CAASC (ver `MERCADO.md`) e
+   comparar, por um mês, o volume que eles entregam com o que o robô captura.
+   É a única forma barata de descobrir se a nossa captura está incompleta.
+5c. Perguntar à CAASC se a leitura de painel cobre o e-Proc da Justiça Federal
+   (JFSC/TRF4) ou apenas o do TJSC. Isso decide se sobra algum buraco real.
 6. Definir prazos-padrão por tipo de ato como rede de segurança para quando o
    texto não disser os dias.
 7. Só depois de tudo isso: pensar na integração com o Law Net (fora do escopo

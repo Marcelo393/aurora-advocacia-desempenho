@@ -581,6 +581,172 @@ def normalizar_item(bruto, advogado):
     }
 
 
+# --------------------------------------------------------------------
+# Importacao de planilha (segunda fonte, alem do DJEN)
+#
+# A OAB/SC oferece publicacoes de graca aos inscritos (convenio com a Advise,
+# ativacao em liber.adv.br) e a CAASC oferece o CAASC Intimacoes. Ambos
+# exportam planilha. Ler essa planilha da ao escritorio uma segunda fonte sem
+# custo nenhum, e permite trabalhar mesmo com o DJEN fora do ar.
+# --------------------------------------------------------------------
+
+COLUNAS_PROCESSO = ["processo", "numero do processo", "numero processo",
+                    "n processo", "num processo", "numeroprocesso", "autos"]
+COLUNAS_DATA = ["data de disponibilizacao", "data disponibilizacao",
+                "disponibilizacao", "data de publicacao", "data publicacao",
+                "publicacao", "data do diario", "data"]
+COLUNAS_TEOR = ["teor", "texto", "integra", "conteudo", "publicacao completa",
+                "materia", "intimacao", "movimentacao"]
+COLUNAS_ORGAO = ["orgao julgador", "orgao", "vara", "juizo", "unidade"]
+COLUNAS_TRIB = ["tribunal", "sigla do tribunal", "diario", "origem", "caderno"]
+COLUNAS_ADV = ["advogado", "destinatario", "nome do advogado", "nome"]
+
+ORIGEM_PLANILHA = 1899, 12, 30  # como o Excel conta datas
+
+
+def _achar_coluna(cabecalhos, candidatos):
+    """Casa o nome da coluna da planilha com o que precisamos, tolerando
+    variacoes de acento, maiuscula e texto extra."""
+    normalizados = {c: normalizar(c) for c in cabecalhos}
+    for alvo in candidatos:
+        for original, limpo in normalizados.items():
+            if limpo == alvo:
+                return original
+    for alvo in candidatos:
+        for original, limpo in normalizados.items():
+            if alvo in limpo:
+                return original
+    return None
+
+
+def converter_data(valor):
+    """Aceita 20/07/2026, 2026-07-20 e o numero de serie do Excel."""
+    texto = str(valor or "").strip()
+    if not texto:
+        return ""
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})", texto)
+    if m:
+        return "%s-%s-%s" % m.groups()
+    m = re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})", texto)
+    if m:
+        dia, mes, ano = m.groups()
+        return "%s-%02d-%02d" % (ano, int(mes), int(dia))
+    if re.match(r"^\d+(\.\d+)?$", texto):  # numero de serie do Excel
+        try:
+            base = date(*ORIGEM_PLANILHA)
+            return (base + timedelta(days=int(float(texto)))).isoformat()
+        except (ValueError, OverflowError):
+            return ""
+    return ""
+
+
+def _ler_csv(caminho):
+    for codificacao in ("utf-8-sig", "latin-1"):
+        try:
+            with open(caminho, "r", encoding=codificacao, newline="") as f:
+                amostra = f.read(4096)
+                f.seek(0)
+                separador = ";" if amostra.count(";") >= amostra.count(",") else ","
+                return [dict(l) for l in csv.DictReader(f, delimiter=separador)]
+        except UnicodeDecodeError:
+            continue
+    raise ValueError("nao consegui ler o arquivo %s" % caminho)
+
+
+def _ler_xlsx(caminho):
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    with zipfile.ZipFile(caminho) as z:
+        textos = []
+        if "xl/sharedStrings.xml" in z.namelist():
+            raiz = ET.fromstring(z.read("xl/sharedStrings.xml"))
+            for si in raiz.findall(ns + "si"):
+                textos.append("".join(t.text or "" for t in si.iter(ns + "t")))
+
+        planilhas = sorted(n for n in z.namelist()
+                           if n.startswith("xl/worksheets/sheet") and n.endswith(".xml"))
+        if not planilhas:
+            raise ValueError("planilha vazia: %s" % caminho)
+        raiz = ET.fromstring(z.read(planilhas[0]))
+
+        linhas = []
+        for linha in raiz.iter(ns + "row"):
+            celulas = {}
+            for c in linha.findall(ns + "c"):
+                coluna = "".join(ch for ch in (c.get("r") or "") if ch.isalpha())
+                tipo = c.get("t")
+                v = c.find(ns + "v")
+                if tipo == "s" and v is not None and v.text is not None:
+                    indice = int(v.text)
+                    valor = textos[indice] if indice < len(textos) else ""
+                elif tipo == "inlineStr":
+                    valor = "".join(t.text or "" for t in c.iter(ns + "t"))
+                else:
+                    valor = (v.text or "") if v is not None else ""
+                celulas[coluna] = valor
+            linhas.append(celulas)
+
+    if not linhas:
+        return []
+    cabecalho = linhas[0]
+    registros = []
+    for linha in linhas[1:]:
+        if not any(str(x).strip() for x in linha.values()):
+            continue
+        registros.append({cabecalho.get(col, col): valor
+                          for col, valor in linha.items()})
+    return registros
+
+
+def importar_planilha(caminho):
+    """Le uma planilha exportada por outro servico e devolve itens ja
+    normalizados, prontos para o mesmo tratamento dado ao que vem do DJEN."""
+    if caminho.lower().endswith((".xlsx", ".xlsm")):
+        registros = _ler_xlsx(caminho)
+    else:
+        registros = _ler_csv(caminho)
+    if not registros:
+        return []
+
+    cabecalhos = list(registros[0].keys())
+    col_teor = _achar_coluna(cabecalhos, COLUNAS_TEOR)
+    col_data = _achar_coluna(cabecalhos, COLUNAS_DATA)
+    col_proc = _achar_coluna(cabecalhos, COLUNAS_PROCESSO)
+    col_orgao = _achar_coluna(cabecalhos, COLUNAS_ORGAO)
+    col_trib = _achar_coluna(cabecalhos, COLUNAS_TRIB)
+    col_adv = _achar_coluna(cabecalhos, COLUNAS_ADV)
+
+    faltando = [nome for nome, col in
+                (("teor da publicacao", col_teor), ("data", col_data))
+                if col is None]
+    if faltando:
+        raise ValueError(
+            "a planilha nao tem coluna de %s. Colunas encontradas: %s"
+            % (" e de ".join(faltando), ", ".join(str(c) for c in cabecalhos)))
+
+    itens = []
+    for reg in registros:
+        teor = limpar_html(reg.get(col_teor, ""))
+        if not teor.strip():
+            continue
+        nome_adv = str(reg.get(col_adv, "") or "").strip() if col_adv else ""
+        advogado = {"nome": nome_adv or "(informado na planilha)",
+                    "oab": "", "uf": ""}
+        bruto = {
+            "texto": teor,
+            "data_disponibilizacao": converter_data(reg.get(col_data, "")),
+            "numero_processo": str(reg.get(col_proc, "") or "") if col_proc else "",
+            "nomeOrgao": str(reg.get(col_orgao, "") or "") if col_orgao else "",
+            "siglaTribunal": str(reg.get(col_trib, "") or "") if col_trib else "",
+        }
+        item = normalizar_item(bruto, advogado)
+        item["oabs_captura"] = ["planilha importada"]
+        itens.append(item)
+    return itens
+
+
 def deduplicar(itens):
     """Mesma intimacao captada pelas duas OABs vira uma linha so."""
     vistos = {}
@@ -934,6 +1100,12 @@ def capturar(args):
     ini = fim - timedelta(days=args.dias)
     itens = []
 
+    if args.importar:
+        print("Lendo a planilha %s" % args.importar)
+        itens = importar_planilha(args.importar)
+        print("%d publicacoes lidas da planilha." % len(itens))
+        return itens, "planilha importada: %s" % args.importar
+
     if args.offline:
         print("MODO OFFLINE: lendo %s (dados de amostra, NAO sao intimacoes reais)"
               % args.offline)
@@ -982,6 +1154,9 @@ def main():
                    help="janela de dias para tras (padrao 30)")
     p.add_argument("--sem-classificacao", action="store_true",
                    help="so captura e conta, sem classificar nem calcular prazo")
+    p.add_argument("--importar", metavar="PLANILHA",
+                   help="le uma planilha (.csv ou .xlsx) exportada por outro "
+                        "servico, como a Advise da OAB/SC, em vez do DJEN")
     p.add_argument("--offline", metavar="ARQUIVO",
                    help="le itens de um arquivo em vez de consultar a API")
     p.add_argument("--saida", default="prazos.csv", help="arquivo CSV de saida")

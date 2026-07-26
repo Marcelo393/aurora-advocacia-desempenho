@@ -5,15 +5,25 @@ Testes do motor de prazo e do filtro antialucinacao.
 Rode com:  python3 test_prazos.py
 """
 
+import csv
+import os
+import tempfile
 import unittest
 from datetime import date
 
 from djen_prazos import (
+    COLUNAS_DATA,
+    COLUNAS_ORGAO,
+    COLUNAS_PROCESSO,
+    COLUNAS_TEOR,
     AnoSemFeriadosError,
+    _achar_coluna,
     calcular_prazo_fatal,
+    converter_data,
     data_publicacao_djen,
     deduplicar,
     detectar_rito,
+    importar_planilha,
     montar_linha,
     normalizar_item,
     sanear_classificacao,
@@ -257,6 +267,75 @@ class TestDeduplicacao(unittest.TestCase):
             normalizar_item(self.bruto("Fica intimado.", data="2026-07-27"), self.ERNESTO),
         ]
         self.assertEqual(len(deduplicar(itens)), 2)
+
+
+class TestImportacaoDePlanilha(unittest.TestCase):
+    """Segunda fonte: planilha da Advise/OAB-SC, CAASC ou qualquer outra."""
+
+    def test_datas_nos_tres_formatos(self):
+        self.assertEqual(converter_data("20/07/2026"), "2026-07-20")
+        self.assertEqual(converter_data("2026-07-20"), "2026-07-20")
+        self.assertEqual(converter_data("2026-07-20T00:00:00"), "2026-07-20")
+        self.assertEqual(converter_data("1/7/2026"), "2026-07-01")
+        self.assertEqual(converter_data("46223"), "2026-07-20")  # serie do Excel
+        self.assertEqual(converter_data(""), "")
+        self.assertEqual(converter_data("sem data"), "")
+
+    def test_cabecalhos_com_acento_e_variacao_sao_reconhecidos(self):
+        cabecalhos = ["Data da Publicação", "Nº do Processo", "Órgão Julgador",
+                      "Íntegra da Publicação"]
+        self.assertEqual(_achar_coluna(cabecalhos, COLUNAS_DATA),
+                         "Data da Publicação")
+        self.assertEqual(_achar_coluna(cabecalhos, COLUNAS_PROCESSO),
+                         "Nº do Processo")
+        self.assertEqual(_achar_coluna(cabecalhos, COLUNAS_ORGAO),
+                         "Órgão Julgador")
+        self.assertEqual(_achar_coluna(cabecalhos, COLUNAS_TEOR),
+                         "Íntegra da Publicação")
+
+    def _planilha(self, linhas, sufixo=".csv"):
+        caminho = os.path.join(tempfile.mkdtemp(), "recorte" + sufixo)
+        with open(caminho, "w", encoding="utf-8-sig", newline="") as f:
+            csv.writer(f, delimiter=";").writerows(linhas)
+        return caminho
+
+    def test_planilha_vira_intimacao_com_prazo_calculavel(self):
+        caminho = self._planilha([
+            ["Data da Publicação", "Nº do Processo", "Órgão Julgador", "Íntegra"],
+            ["20/07/2026", "5001234-56.2026.4.04.7205", "1º JEF de Blumenau",
+             "Intimada do laudo, prazo de 15 (quinze) dias úteis."],
+        ])
+        itens = importar_planilha(caminho)
+        self.assertEqual(len(itens), 1)
+        self.assertEqual(itens[0]["data_disponibilizacao"], "2026-07-20")
+        self.assertEqual(itens[0]["rito"], "jef")
+        self.assertIn("quinze", itens[0]["teor"])
+
+    def test_linhas_vazias_sao_ignoradas(self):
+        caminho = self._planilha([
+            ["Data", "Processo", "Teor"],
+            ["20/07/2026", "5001234-56.2026.4.04.7205", "Fica intimado."],
+            ["", "", ""],
+            ["21/07/2026", "5002222-22.2026.4.04.7205", "   "],
+        ])
+        self.assertEqual(len(importar_planilha(caminho)), 1)
+
+    def test_planilha_sem_coluna_de_teor_recusa_com_explicacao(self):
+        caminho = self._planilha([
+            ["Data", "Processo"],
+            ["20/07/2026", "5001234-56.2026.4.04.7205"],
+        ])
+        with self.assertRaises(ValueError) as erro:
+            importar_planilha(caminho)
+        self.assertIn("teor", str(erro.exception))
+
+    def test_planilha_nao_engole_intimacoes_distintas(self):
+        caminho = self._planilha([
+            ["Data", "Processo", "Teor"],
+            ["20/07/2026", "5001234-56.2026.4.04.7205", "Intimado do laudo."],
+            ["20/07/2026", "5001234-56.2026.4.04.7205", "Intimado da sentenca."],
+        ])
+        self.assertEqual(len(deduplicar(importar_planilha(caminho))), 2)
 
 
 class TestSaneamento(unittest.TestCase):
