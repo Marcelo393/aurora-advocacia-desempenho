@@ -74,6 +74,9 @@ data em que o relatório foi gerado.
 | `teores_capturados.json` | Gerado automaticamente. Teores capturados, para conferência e para classificação manual. |
 | `classificacoes.json` | Classificação usada quando não há `ANTHROPIC_API_KEY`. |
 | `prazos.csv` | Saída final para a controladoria. Ponto e vírgula, com BOM, abre no Excel em português. |
+| `1_TESTAR_CONEXAO.bat` | Atalho de dois cliques para Windows. Roda o diagnóstico e grava `diagnostico.txt`. |
+| `2_GERAR_PRAZOS.bat` | Atalho de dois cliques. Gera a planilha e abre no Excel. Trata o caso "sem chave de IA". |
+| `COMO_RODAR.md` | Passo a passo em linguagem comum, para quem vai executar no escritório. |
 
 Comandos:
 
@@ -197,7 +200,42 @@ descrito no item 6. O ciclo completo foi exercitado com a amostra simulada de
 `exemplos_djen.json` (13 capturas, 11 depois da deduplicação, 7 com prazo
 calculado, 6 marcadas para revisão).
 
-## 10. Pendências, na ordem
+## 10. Como o mercado resolve isso (pesquisa de 26/07/2026)
+
+Levantamento feito para conferir se estamos construindo o que já se compra pronto.
+
+**Como as empresas fazem, na prática.** Nenhuma raspa tribunal. Todas fazem
+"recorte digital": leem os diários (DJEN + DJEs estaduais + murais + pautas)
+buscando o nome e o número da OAB, e entregam o resultado por e-mail ou por API.
+A IA sugere o prazo; **a confirmação é sempre humana** — nenhuma delas deixa o
+modelo gravar data fatal sozinho. Isso confirma a regra 1 deste projeto.
+
+**Fornecedores identificados.** Legalcloud (recorte por nome+OAB em todos os
+diários nacionais, IA que sugere prazo, a partir de R$ 29,99/mês por nome
+monitorado, sobre o plano Premium); Publicações Online e Alerte (recorte amplo,
+entrega por e-mail ou API); Bonnjur e Projurídico Publicações (mesmo modelo);
+Escavador (API paga por uso, ~R$ 4,50 na consulta inicial por bloco de 200 itens,
+SDK Python oficial); Judit.io e Digesto (infraestrutura de dados por API, consulta
+por OAB, webhooks); Advise, ADVBOX, Astrea, Projuris e LegalSuite (software
+completo, com captura e controle de prazo embutidos).
+
+**Conclusões que importam para o projeto.**
+1. A captura em si é commodity barata — dois nomes monitorados custam cerca de
+   R$ 60/mês. O que o mercado NÃO vende é a integração com o Law Net e as regras
+   próprias do escritório. É aí que está o valor do que construímos.
+2. Vale contratar um recorte pago como **rede de segurança redundante** e como
+   régua de conferência: se o robô trouxer menos intimações que o serviço pago,
+   sabemos que há falha de captura.
+3. O DJEN já teve indisponibilidade nacional noticiada (TRT2). Fonte única é
+   risco; qualquer desenho definitivo precisa de redundância.
+4. Custo da classificação por IA (estimativa, preços de 07/2026): com
+   `claude-sonnet-5` a US$ 3 por milhão de tokens de entrada e US$ 15 de saída,
+   uma intimação curta sai por cerca de R$ 0,03. Duzentas intimações por mês dão
+   algo em torno de R$ 6/mês. Com `claude-haiku-4-5` (US$ 1 / US$ 5) cai para
+   cerca de R$ 2/mês. Ou seja: a chave de API é irrelevante no orçamento e
+   resolve a dependência de classificação manual.
+
+## 11. Pendências, na ordem
 
 1. Rodar `--diagnostico` numa máquina do escritório com internet liberada,
    confirmar os nomes dos parâmetros e dos campos de resposta, e anotar aqui.
