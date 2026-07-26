@@ -1,0 +1,147 @@
+{
+  "_AVISO": "DADOS SIMULADOS. Estas NAO sao intimacoes reais. Este arquivo existe apenas para exercitar o ciclo completo (captura, deduplicacao, classificacao, calculo de prazo e CSV) em ambiente sem acesso ao DJEN. Apague-o assim que a captura real funcionar.",
+  "_gerado_em": "2026-07-26",
+  "_observacao": "Os nomes de campo aqui imitam os nomes documentados da API do DJEN. Os dois ultimos blocos usam nomes alternativos de proposito, para testar a tolerancia do script a variacoes.",
+  "capturas": [
+    {
+      "advogado": {"nome": "Ernesto Zulmir Morestoni", "oab": "11666", "uf": "SC"},
+      "itens": [
+        {
+          "hash": "a1b2c3d4e5",
+          "numero_processo": "5001234-56.2026.4.04.7205",
+          "data_disponibilizacao": "2026-07-20",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "1º JEF de Blumenau",
+          "tipoComunicacao": "Intimação",
+          "link": "https://eproc.jfsc.jus.br/eprocV2/exemplo1",
+          "texto": "<p>Fica a parte autora intimada do laudo pericial juntado ao evento 58, para, querendo, manifestar-se no prazo de 15 (quinze) dias úteis, nos termos do art. 477, §1º, do CPC. Perícia realizada por engenheiro de segurança do trabalho. Ação de aposentadoria especial com discussão de exposição a ruído e agentes químicos.</p>"
+        },
+        {
+          "hash": "b2c3d4e5f6",
+          "numero_processo": "5002345-67.2026.4.04.7205",
+          "data_disponibilizacao": "2026-07-13",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "2ª Vara Federal de Blumenau",
+          "tipoComunicacao": "Sentença",
+          "link": "https://eproc.jfsc.jus.br/eprocV2/exemplo2",
+          "texto": "<p>SENTENÇA. Ante o exposto, JULGO PARCIALMENTE PROCEDENTE o pedido para reconhecer o direito da parte autora à aposentadoria da pessoa com deficiência de grau moderado, nos termos da LC 142/2013, condenando o INSS à implantação do benefício. Ficam as partes intimadas da sentença, correndo o prazo recursal de 15 (quinze) dias úteis.</p>"
+        },
+        {
+          "hash": "c3d4e5f6g7",
+          "numero_processo": "5003456-78.2025.4.04.7205",
+          "data_disponibilizacao": "2026-07-08",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "6ª Turma do Tribunal Regional Federal da 4ª Região",
+          "tipoComunicacao": "Acórdão",
+          "link": "https://eproc.trf4.jus.br/eproc2trf4/exemplo3",
+          "texto": "<p>ACÓRDÃO. Vistos e relatados estes autos, decide a 6ª Turma do Tribunal Regional Federal da 4ª Região, por unanimidade, dar parcial provimento à apelação da parte autora para reconhecer como especial o período de 12/03/1998 a 05/11/2003, nos termos do relatório e votos. Publique-se. Intimem-se. Prazo para embargos de declaração de 5 (cinco) dias úteis.</p>"
+        },
+        {
+          "hash": "d4e5f6g7h8",
+          "numero_processo": "5004567-89.2026.4.04.7205",
+          "data_disponibilizacao": "2026-07-22",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "1º JEF de Blumenau",
+          "tipoComunicacao": "Ato Ordinatório",
+          "link": "https://eproc.jfsc.jus.br/eprocV2/exemplo4",
+          "texto": "<p>ATO ORDINATÓRIO. Fica a parte autora intimada para se manifestar sobre a contestação e os documentos apresentados pelo INSS no evento 31, no prazo de 15 (quinze) dias. Ação de reconhecimento de tempo rural em regime de economia familiar.</p>"
+        },
+        {
+          "hash": "e5f6g7h8i9",
+          "numero_processo": "5005678-90.2026.4.04.7205",
+          "data_disponibilizacao": "2026-07-17",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "1º JEF de Blumenau",
+          "tipoComunicacao": "Intimação",
+          "link": "https://eproc.jfsc.jus.br/eprocV2/exemplo5",
+          "texto": "<p>Fica a parte autora intimada da designação de perícia médica para o dia 14/08/2026, às 14h30min, na Clínica Pericial de Blumenau, Rua XV de Novembro, nº 1200, devendo comparecer munida de documento de identificação com foto e de todos os exames e laudos médicos de que dispuser.</p>"
+        },
+        {
+          "hash": "f6g7h8i9j0",
+          "numero_processo": "5006789-01.2026.4.04.7205",
+          "data_disponibilizacao": "2026-07-23",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "2ª Vara Federal de Blumenau",
+          "tipoComunicacao": "Intimação",
+          "link": "https://eproc.jfsc.jus.br/eprocV2/exemplo6",
+          "texto": "<p>Fica a parte autora intimada do inteiro teor do despacho do evento 42.</p>"
+        },
+        {
+          "hash": "g7h8i9j0k1",
+          "numero_processo": "0301234-56.2026.8.24.0008",
+          "data_disponibilizacao": "2026-07-15",
+          "siglaTribunal": "TJSC",
+          "nomeOrgao": "Vara da Fazenda Pública da Comarca de Blumenau",
+          "tipoComunicacao": "Despacho",
+          "link": "https://esaj.tjsc.jus.br/exemplo7",
+          "texto": "<p>DESPACHO. Emende a parte autora a inicial, no prazo de 15 (quinze) dias, sob pena de indeferimento, a fim de juntar o laudo do DETRAN e comprovante de propriedade do veículo, bem como o requerimento administrativo de isenção de IPVA.</p>"
+        },
+        {
+          "hash": "h8i9j0k1l2",
+          "numero_processo": "5007890-12.2024.4.04.7205",
+          "data_disponibilizacao": "2026-07-06",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "1º JEF de Blumenau",
+          "tipoComunicacao": "Intimação",
+          "link": "https://eproc.jfsc.jus.br/eprocV2/exemplo8",
+          "texto": "<p>Cumprimento de sentença. Fica a parte exequente intimada para apresentar planilha de cálculo atualizada dos valores devidos, no prazo de 30 (trinta) dias, observados os parâmetros fixados no título executivo judicial.</p>"
+        },
+        {
+          "hash": "i9j0k1l2m3",
+          "numero_processo": "5008901-23.2023.4.04.7205",
+          "data_disponibilizacao": "2026-06-30",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "2ª Vara Federal de Blumenau",
+          "tipoComunicacao": "Intimação",
+          "link": "https://eproc.jfsc.jus.br/eprocV2/exemplo9",
+          "texto": "<p>Certifico que, cumpridas todas as determinações e satisfeita a obrigação, os autos foram remetidos ao arquivo findo. Ficam as partes intimadas do arquivamento definitivo do feito.</p>"
+        },
+        {
+          "hash": "c3d4e5f6g7",
+          "numero_processo": "5003456-78.2025.4.04.7205",
+          "data_disponibilizacao": "2026-07-08",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "6ª Turma do Tribunal Regional Federal da 4ª Região",
+          "tipoComunicacao": "Acórdão",
+          "link": "https://eproc.trf4.jus.br/eproc2trf4/exemplo3",
+          "texto": "<p>ACÓRDÃO. Vistos e relatados estes autos, decide a 6ª Turma do Tribunal Regional Federal da 4ª Região, por unanimidade, dar parcial provimento à apelação da parte autora para reconhecer como especial o período de 12/03/1998 a 05/11/2003, nos termos do relatório e votos. Publique-se. Intimem-se. Prazo para embargos de declaração de 5 (cinco) dias úteis.</p>"
+        }
+      ]
+    },
+    {
+      "advogado": {"nome": "Carlos Oscar Krueger", "oab": "27320", "uf": "SC"},
+      "itens": [
+        {
+          "hash": "c3d4e5f6g7",
+          "numero_processo": "5003456-78.2025.4.04.7205",
+          "data_disponibilizacao": "2026-07-08",
+          "siglaTribunal": "TRF4",
+          "nomeOrgao": "6ª Turma do Tribunal Regional Federal da 4ª Região",
+          "tipoComunicacao": "Acórdão",
+          "link": "https://eproc.trf4.jus.br/eproc2trf4/exemplo3",
+          "texto": "<p>ACÓRDÃO. Vistos e relatados estes autos, decide a 6ª Turma do Tribunal Regional Federal da 4ª Região, por unanimidade, dar parcial provimento à apelação da parte autora para reconhecer como especial o período de 12/03/1998 a 05/11/2003, nos termos do relatório e votos. Publique-se. Intimem-se. Prazo para embargos de declaração de 5 (cinco) dias úteis.</p>"
+        },
+        {
+          "idComunicacao": "j0k1l2m3n4",
+          "numeroProcesso": "5009012-34.2026.4.04.7205",
+          "dataDisponibilizacao": "2026-07-24",
+          "tribunal": "TRF4",
+          "orgaoJulgador": "1º JEF de Blumenau",
+          "tipoDocumento": "Intimação",
+          "url": "https://eproc.jfsc.jus.br/eprocV2/exemplo10",
+          "teor": "<p>Fica a parte autora intimada do laudo pericial médico juntado ao evento 44, podendo manifestar-se no prazo de 10 (dez) dias. Ação declaratória de isenção de imposto de renda por moléstia profissional cumulada com repetição de indébito, ajuizada em face da União Federal.</p>"
+        },
+        {
+          "idComunicacao": "k1l2m3n4o5",
+          "numeroProcesso": "5010123-45.2026.4.04.7205",
+          "dataDisponibilizacao": "2026-07-21",
+          "tribunal": "TRF4",
+          "orgaoJulgador": "1º JEF de Blumenau",
+          "tipoDocumento": "Intimação",
+          "url": "https://eproc.jfsc.jus.br/eprocV2/exemplo11",
+          "teor": "<p>Fica a parte autora intimada da designação de audiência de instrução e julgamento para o dia 03/09/2026, às 09h00min, por videoconferência, devendo comparecer acompanhada de suas testemunhas, independentemente de intimação, para comprovação do labor rural em regime de economia familiar.</p>"
+        }
+      ]
+    }
+  ]
+}

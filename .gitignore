@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Prova de conceito de prazos (Python)
+__pycache__/

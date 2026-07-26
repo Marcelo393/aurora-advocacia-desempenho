@@ -1,0 +1,116 @@
+{
+  "_origem": "Classificacao feita por leitura dos teores gravados em teores_capturados.json, sem chamada de API (a variavel ANTHROPIC_API_KEY nao existia na maquina). Cada 'prazo_extraido_do_texto' foi copiado literalmente do teor e e conferido pelo script contra o texto antes de virar data.",
+  "_gerado_em": "2026-07-26",
+  "classificacoes": {
+    "a1b2c3d4e5|50012345620264047205": {
+      "tipo_ato": "intimacao_laudo",
+      "materia": "especial",
+      "ha_prazo": true,
+      "prazo_dias": 15,
+      "contagem": "dias_uteis",
+      "acao_esperada": "elaborar manifestacao ao laudo pericial de engenharia (ruido e agentes quimicos)",
+      "prazo_extraido_do_texto": "no prazo de 15 (quinze) dias úteis",
+      "confianca": 0.95
+    },
+    "b2c3d4e5f6|50023456720264047205": {
+      "tipo_ato": "sentenca",
+      "materia": "pcd",
+      "ha_prazo": true,
+      "prazo_dias": 15,
+      "contagem": "dias_uteis",
+      "acao_esperada": "analisar sentenca parcialmente procedente e decidir sobre recurso; acompanhar implantacao do beneficio",
+      "prazo_extraido_do_texto": "prazo recursal de 15 (quinze) dias úteis",
+      "confianca": 0.97
+    },
+    "c3d4e5f6g7|50034567820254047205": {
+      "tipo_ato": "acordao",
+      "materia": "especial",
+      "ha_prazo": true,
+      "prazo_dias": 5,
+      "contagem": "dias_uteis",
+      "acao_esperada": "conferir periodos reconhecidos no acordao e avaliar embargos de declaracao",
+      "prazo_extraido_do_texto": "Prazo para embargos de declaração de 5 (cinco) dias úteis",
+      "confianca": 0.96
+    },
+    "d4e5f6g7h8|50045678920264047205": {
+      "tipo_ato": "ato_ordinatorio",
+      "materia": "rural",
+      "ha_prazo": true,
+      "prazo_dias": 15,
+      "contagem": "dias_uteis",
+      "acao_esperada": "elaborar replica a contestacao do INSS e aos documentos do evento 31",
+      "prazo_extraido_do_texto": "no prazo de 15 (quinze) dias",
+      "confianca": 0.93
+    },
+    "e5f6g7h8i9|50056789020264047205": {
+      "tipo_ato": "intimacao_pericia",
+      "materia": "outro",
+      "ha_prazo": false,
+      "prazo_dias": null,
+      "contagem": "dias_uteis",
+      "acao_esperada": "EXCECAO - pauta de pericia: avisar o cliente da pericia de 14/08/2026 as 14h30 e conferir documentos",
+      "prazo_extraido_do_texto": "",
+      "confianca": 0.9
+    },
+    "f6g7h8i9j0|50067890120264047205": {
+      "tipo_ato": "outro",
+      "materia": "outro",
+      "ha_prazo": false,
+      "prazo_dias": null,
+      "contagem": "dias_uteis",
+      "acao_esperada": "EXCECAO - publicacao sem teor: abrir o processo no e-Proc e ler o evento 42 para saber se ha prazo",
+      "prazo_extraido_do_texto": "",
+      "confianca": 0.3
+    },
+    "g7h8i9j0k1|03012345620268240008": {
+      "tipo_ato": "despacho",
+      "materia": "ipva",
+      "ha_prazo": true,
+      "prazo_dias": 15,
+      "contagem": "dias_uteis",
+      "acao_esperada": "emendar a inicial juntando laudo do DETRAN, propriedade do veiculo e requerimento administrativo",
+      "prazo_extraido_do_texto": "no prazo de 15 (quinze) dias",
+      "confianca": 0.92
+    },
+    "h8i9j0k1l2|50078901220244047205": {
+      "tipo_ato": "cumprimento_sentenca",
+      "materia": "outro",
+      "ha_prazo": true,
+      "prazo_dias": 30,
+      "contagem": "dias_uteis",
+      "acao_esperada": "elaborar planilha de calculo atualizada conforme os parametros do titulo",
+      "prazo_extraido_do_texto": "no prazo de 30 (trinta) dias",
+      "confianca": 0.88
+    },
+    "i9j0k1l2m3|50089012320234047205": {
+      "tipo_ato": "arquivamento",
+      "materia": "outro",
+      "ha_prazo": false,
+      "prazo_dias": null,
+      "contagem": "dias_uteis",
+      "acao_esperada": "conferir se a obrigacao foi mesmo satisfeita e encerrar a pasta do cliente",
+      "prazo_extraido_do_texto": "",
+      "confianca": 0.9
+    },
+    "j0k1l2m3n4|50090123420264047205": {
+      "tipo_ato": "intimacao_laudo",
+      "materia": "isencao_ir",
+      "ha_prazo": true,
+      "prazo_dias": 10,
+      "contagem": "dias_uteis",
+      "acao_esperada": "elaborar manifestacao ao laudo pericial medico sobre molestia profissional",
+      "prazo_extraido_do_texto": "no prazo de 10 (dez) dias",
+      "confianca": 0.94
+    },
+    "k1l2m3n4o5|50101234520264047205": {
+      "tipo_ato": "audiencia",
+      "materia": "rural",
+      "ha_prazo": false,
+      "prazo_dias": null,
+      "contagem": "dias_uteis",
+      "acao_esperada": "EXCECAO - pauta de audiencia: preparar cliente e testemunhas para 03/09/2026 as 09h por videoconferencia",
+      "prazo_extraido_do_texto": "",
+      "confianca": 0.93
+    }
+  }
+}
