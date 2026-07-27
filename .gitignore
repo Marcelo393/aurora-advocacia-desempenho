@@ -25,3 +25,9 @@ dist-ssr
 
 # Prova de conceito de prazos (Python)
 __pycache__/
+
+# Saidas geradas a cada execucao. A partir da primeira captura real
+# elas contem intimacoes de clientes e NAO podem ir para o GitHub.
+teores_capturados.json
+prazos.csv
+diagnostico.txt
