@@ -16,14 +16,27 @@ na branch `claude/djen-prazo-bot-poc-r995vp`.
 
 Faça nesta ordem, e pare no primeiro problema:
 
-1. Verifique se o Python 3 está instalado nesta máquina. Se não estiver, me diga
-   como instalar (marcando "Add Python to PATH" no Windows) e pare por aqui.
+1. Deixe o Python 3 funcionando nesta máquina. **Instale você mesmo — não me
+   explique como fazer, faça.**
+   - Se já estiver instalado, só confirme a versão e siga adiante.
+   - No Windows, use o winget:
+     `winget install --id Python.Python.3.12 --scope user --accept-source-agreements --accept-package-agreements`
+     Se o winget não existir nesta máquina, baixe o instalador oficial do
+     python.org e rode em modo silencioso, com `PrependPath=1` e instalação
+     apenas para o meu usuário, para não precisar de senha de administrador.
+   - No Mac, use o Homebrew (`brew install python`). Se não houver Homebrew,
+     use o instalador oficial do python.org.
+   - Ao final, confirme que deu certo mostrando a versão instalada.
+   - Só pare neste passo se a máquina exigir uma senha de administrador que você
+     não tem. Nesse caso, me diga exatamente o que travou.
 
 2. Baixe o repositório e use a branch `claude/djen-prazo-bot-poc-r995vp`.
    Pode clonar com git ou baixar o ZIP da branch, o que for mais simples.
 
 3. Rode `python3 test_prazos.py` (no Windows pode ser `py -3 test_prazos.py`).
    Devem passar 33 testes. Se algum falhar, pare e me mostre qual falhou.
+   Se o comando não for encontrado logo depois da instalação, abra um terminal
+   novo — o Windows só enxerga o Python nas janelas abertas depois dele.
 
 4. Rode `python3 djen_prazos.py --diagnostico`.
    - Leia o bloco marcado `[1]`. Ele responde se esta máquina alcança o DJEN.
